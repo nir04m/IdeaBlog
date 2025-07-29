@@ -4,6 +4,9 @@ import dotenv from 'dotenv';
 import pool from './config/db.js';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/authRoutes.js';
+import userRoutes     from './routes/userRoutes.js';
+import categoryRoutes from './routes/categoryRoutes.js';
+import tagRoutes from './routes/tagRoutes.js';
 
 dotenv.config();
 
@@ -25,7 +28,19 @@ const app = express();
 
 app.use(express.json());
 app.use(cookieParser());
+
+
+// Public routes
 app.use('/api/auth', authRoutes);
+
+// Protected user routes
+app.use('/api/user', userRoutes);
+
+// Protected Category routes
+app.use('/api/categories', categoryRoutes);
+
+//Protected Tag routes
+app.use('/api/tags', tagRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

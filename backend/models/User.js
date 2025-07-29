@@ -46,11 +46,16 @@ class User {
    * Retrieve a user by ID (omit password).
    * @param {number} id
    * @returns {Promise<Object?>} the user row without password or null
-   */
-  static async findById(id) {
+   */  static async findById(id) {
     const [rows] = await pool.execute(
-      `SELECT id, username, email, bio, profile_picture AS profilePicture
-       FROM users WHERE id = ?`,
+      `SELECT id,
+              username,
+              email,
+              bio,
+              profile_picture AS profilePicture,
+              is_admin      AS isAdmin
+       FROM users
+       WHERE id = ?`,
       [id]
     );
     return rows[0] ?? null;

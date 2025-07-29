@@ -54,3 +54,5 @@ CREATE TABLE IF NOT EXISTS post_tags (
   FOREIGN KEY (post_id)    REFERENCES posts(id)    ON DELETE CASCADE,
   FOREIGN KEY (tag_id)     REFERENCES tags(id)     ON DELETE CASCADE
 );
+
+
