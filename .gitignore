@@ -48,3 +48,7 @@ docker-compose.override.yml
 
 # Misc
 *.tgz
+
+# certificate authority files
+certs/*.pem
+
