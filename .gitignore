@@ -51,4 +51,6 @@ docker-compose.override.yml
 
 # certificate authority files
 certs/*.pem
+
+
 backend/.env
