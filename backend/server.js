@@ -7,6 +7,8 @@ import authRoutes from './routes/authRoutes.js';
 import userRoutes     from './routes/userRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
 import tagRoutes from './routes/tagRoutes.js';
+import userPostsRoutes from './routes/userPostsRoutes.js';
+import postRoutes      from './routes/postRoutes.js';
 
 dotenv.config();
 
@@ -41,6 +43,11 @@ app.use('/api/categories', categoryRoutes);
 
 //Protected Tag routes
 app.use('/api/tags', tagRoutes);
+
+//Protected Post routes
+app.use('/api/posts', postRoutes);
+
+app.use('/api/users/:userId/posts', userPostsRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

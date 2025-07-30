@@ -39,7 +39,7 @@ const pool = mysql.createPool({
     console.log('Database schema initialized');
 
     // 2) Conditionally add is_admin column if it doesn't exist
-    const [cols] = await pool.query(
+    const [adminCols] = await pool.query(
       `SELECT 1
        FROM information_schema.COLUMNS
        WHERE TABLE_SCHEMA = ?
@@ -48,8 +48,7 @@ const pool = mysql.createPool({
        LIMIT 1`,
       [dbName]
     );
-
-    if (cols.length === 0) {
+    if (adminCols.length === 0) {
       await pool.query(
         `ALTER TABLE users
          ADD COLUMN is_admin TINYINT(1) NOT NULL DEFAULT 0`
@@ -57,6 +56,27 @@ const pool = mysql.createPool({
       console.log('Added is_admin column to users table');
     } else {
       console.log('is_admin column already exists; skipping ALTER');
+    }
+
+    // 3) Conditionally add tag_id column to posts if it doesn't exist
+    const [tagCols] = await pool.query(
+      `SELECT 1
+       FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = ?
+         AND TABLE_NAME   = 'posts'
+         AND COLUMN_NAME  = 'tag_id'
+       LIMIT 1`,
+      [dbName]
+    );
+    if (tagCols.length === 0) {
+      await pool.query(
+        `ALTER TABLE posts
+         ADD COLUMN tag_id INT NULL,
+         ADD FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE SET NULL`
+      );
+      console.log('Added tag_id column to posts table');
+    } else {
+      console.log('tag_id column already exists; skipping ALTER');
     }
 
   } catch (err) {
