@@ -53,3 +53,4 @@ docker-compose.override.yml
 certs/*.pem
 
 .env
+backend/certs/ca.pem
