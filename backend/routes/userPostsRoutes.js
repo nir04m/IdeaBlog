@@ -4,7 +4,7 @@ import Joi from 'joi';
 import { authenticate } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
 import {
-  getPostsByUser,
+  getMyPosts,
   createPost
 } from '../controllers/postController.js';
 
@@ -19,7 +19,7 @@ const postSchema = Joi.object({
 });
 
 // List & create for a specific user
-router.get('/', authenticate, getPostsByUser);
+router.get('/', authenticate, getMyPosts);
 router.post('/', authenticate, validateBody(postSchema), createPost);
 
 export default router;

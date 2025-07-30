@@ -1,25 +1,25 @@
 // backend/controllers/postController.js
-import Post from '../models/Post.js';
+import Post         from '../models/Post.js';
 import PostCategory from '../models/PostCategory.js';
 import PostTag      from '../models/PostTag.js';
 
 /**
- * POST /api/users/:userId/posts
+ * POST /api/posts
+ * Create a new post for the authenticated user
  */
 export const createPost = async (req, res, next) => {
   try {
-    const userId = Number(req.params.userId);
-    if (req.user.id !== userId) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-
+    const userId = req.user.id;
     const { title, content, imageUrl, categoryId, tagIds = [] } = req.body;
+
     const postId = await Post.create({ userId, title, content, imageUrl, categoryId, tagIds });
 
-    // manage join-tables
+    // category (single FK + join table)
     if (categoryId) {
       await PostCategory.add({ postId, categoryId });
     }
+    // tags (many-to-many)
+    await PostTag.clearByPost(postId);
     if (Array.isArray(tagIds)) {
       await Promise.all(tagIds.map(tagId =>
         PostTag.add({ postId, tagId })
@@ -47,12 +47,26 @@ export const getAllPosts = async (req, res, next) => {
 };
 
 /**
+ * GET /api/posts/user
+ * Retrieve all posts belonging to the authenticated user
+ */
+export const getMyPosts = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const posts = await Post.findByUser(userId);
+    res.json({ posts });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * GET /api/posts/:id
  * Retrieve a single post by its ID
  */
 export const getPostById = async (req, res, next) => {
   try {
-    const post = await Post.findById(req.params.id);
+    const post = await Post.findById(Number(req.params.id));
     if (!post) {
       return res.status(404).json({ error: 'Post not found' });
     }
@@ -63,24 +77,8 @@ export const getPostById = async (req, res, next) => {
 };
 
 /**
- * GET /api/users/:userId/posts
- * Retrieve all posts for a specific user
- */
-export const getPostsByUser = async (req, res, next) => {
-  try {
-    const targetUserId = Number(req.params.userId);
-    if (req.user.id !== targetUserId) {
-      return res.status(403).json({ error: "Forbidden to view another user's posts" });
-    }
-    const posts = await Post.findByUser(targetUserId);
-    res.json({ posts });
-  } catch (err) {
-    next(err);
-  }
-};
-
-/**
  * PUT /api/posts/:id
+ * Update a post (only owner)
  */
 export const updatePost = async (req, res, next) => {
   try {
@@ -90,20 +88,18 @@ export const updatePost = async (req, res, next) => {
       return res.status(404).json({ error: 'Post not found' });
     }
     if (req.user.id !== existing.userId) {
-      return res.status(403).json({ error: 'Forbidden' });
+      return res.status(403).json({ error: 'Forbidden to update this post' });
     }
 
     const { title, content, imageUrl, categoryId, tagIds = [] } = req.body;
-    const changed = await Post.update(postId, { title, content, imageUrl, categoryId });
+    const changed = await Post.update(postId, { title, content, imageUrl, categoryId, tagIds });
     if (!changed) {
       return res.status(400).json({ error: 'No changes or update failed' });
     }
 
-    // reset join-tables
+    // sync join-tables
     await PostCategory.clearByPost(postId);
-    if (categoryId) {
-      await PostCategory.add({ postId, categoryId });
-    }
+    if (categoryId) await PostCategory.add({ postId, categoryId });
 
     await PostTag.clearByPost(postId);
     if (Array.isArray(tagIds)) {
@@ -121,6 +117,7 @@ export const updatePost = async (req, res, next) => {
 
 /**
  * DELETE /api/posts/:id
+ * Delete a post (only owner—cascades to join tables)
  */
 export const deletePost = async (req, res, next) => {
   try {
@@ -130,10 +127,10 @@ export const deletePost = async (req, res, next) => {
       return res.status(404).json({ error: 'Post not found' });
     }
     if (req.user.id !== existing.userId) {
-      return res.status(403).json({ error: 'Forbidden' });
+      return res.status(403).json({ error: 'Forbidden to delete this post' });
     }
 
-    // clear join-tables (optional; cascade may handle it)
+    // clear join-tables (cascades would also handle this)
     await PostCategory.clearByPost(postId);
     await PostTag.clearByPost(postId);
 
@@ -144,4 +141,4 @@ export const deletePost = async (req, res, next) => {
   }
 };
 
-
+export default { createPost, getAllPosts, getMyPosts, getPostById, updatePost, deletePost };

@@ -7,11 +7,12 @@ class Post {
    * @param {{ userId: number, categoryId: number, title: string, content?: string, imageUrl?: string }} data
    * @returns {Promise<number>} the new post’s ID
    */
-  static async create({ userId, categoryId, title, content = null, imageUrl = null }) {
+  static async create({ userId, categoryId, title, content = null, imageUrl = null, tagId = null }) {
     const [result] = await pool.execute(
-      `INSERT INTO posts (user_id, category_id, title, content, image_url)
-       VALUES (?, ?, ?, ?, ?)`,
-      [userId, categoryId, title, content, imageUrl]
+      `INSERT INTO posts
+         (user_id, category_id, title, content, image_url, tag_id)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [userId, categoryId, title, content, imageUrl, tagId]
     );
     return result.insertId;
   }
@@ -25,13 +26,14 @@ class Post {
     const [rows] = await pool.execute(
       `SELECT
          id,
-         user_id     AS userId,
-         category_id AS categoryId,
+         user_id      AS userId,
+         category_id  AS categoryId,
+         tag_id       AS tagId,
          title,
          content,
-         image_url   AS imageUrl,
-         created_at  AS createdAt,
-         updated_at  AS updatedAt
+         image_url    AS imageUrl,
+         created_at   AS createdAt,
+         updated_at   AS updatedAt
        FROM posts
        WHERE id = ?`,
       [id]
@@ -47,13 +49,14 @@ class Post {
     const [rows] = await pool.execute(
       `SELECT
          id,
-         user_id     AS userId,
-         category_id AS categoryId,
+         user_id      AS userId,
+         category_id  AS categoryId,
+         tag_id       AS tagId,
          title,
          content,
-         image_url   AS imageUrl,
-         created_at  AS createdAt,
-         updated_at  AS updatedAt
+         image_url    AS imageUrl,
+         created_at   AS createdAt,
+         updated_at   AS updatedAt
        FROM posts
        ORDER BY created_at DESC`
     );
@@ -69,13 +72,14 @@ class Post {
     const [rows] = await pool.execute(
       `SELECT
          id,
-         user_id     AS userId,
-         category_id AS categoryId,
+         user_id      AS userId,
+         category_id  AS categoryId,
+         tag_id       AS tagId,
          title,
          content,
-         image_url   AS imageUrl,
-         created_at  AS createdAt,
-         updated_at  AS updatedAt
+         image_url    AS imageUrl,
+         created_at   AS createdAt,
+         updated_at   AS updatedAt
        FROM posts
        WHERE user_id = ?
        ORDER BY created_at DESC`,
@@ -90,15 +94,16 @@ class Post {
    * @param {{ title?: string, content?: string, imageUrl?: string, categoryId?: number }} data
    * @returns {Promise<boolean>}
    */
-  static async update(id, { title = null, content = null, imageUrl = null, categoryId = null }) {
+  static async update(id, { categoryId = null, tagId = null, title = null, content = null, imageUrl = null }) {
     const [result] = await pool.execute(
       `UPDATE posts SET
+         category_id = COALESCE(?, category_id),
+         tag_id      = COALESCE(?, tag_id),
          title       = COALESCE(?, title),
          content     = COALESCE(?, content),
-         image_url   = COALESCE(?, image_url),
-         category_id = COALESCE(?, category_id)
+         image_url   = COALESCE(?, image_url)
        WHERE id = ?`,
-      [title, content, imageUrl, categoryId, id]
+      [categoryId, tagId, title, content, imageUrl, id]
     );
     return result.affectedRows > 0;
   }
