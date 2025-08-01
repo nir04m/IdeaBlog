@@ -17,11 +17,13 @@ jobs:
         with:
           node-version: 18
 
-      - name: Install dependencies
+      - name: Change into backend folder
+        working-directory: backend
         run: npm install
 
       - name: Lint
-        run: npm run lint   # assume you’ve added a lint script (e.g. “eslint .”)
+        working-directory: backend
+        run: npm run lint
 
   docker-build-and-push:
     needs: build-and-lint
