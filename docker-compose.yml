@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: ideablog-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+      MYSQL_DATABASE: defaultdb
+      MYSQL_USER: example
+      MYSQL_PASSWORD: example
+    volumes:
+      - db-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ideablog-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - db
+    environment:
+      DATABASE_URI: mysql://example:example@db:3306/defaultdb
+    volumes:
+      - ./backend:/app
+      - ./certs:/app/certs:ro
+    ports:
+      - "5000:5000"
+
+volumes:
+  db-data:
