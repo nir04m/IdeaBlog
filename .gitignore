@@ -54,3 +54,5 @@ certs/*.pem
 
 .env
 backend/certs/ca.pem
+
+backend/dockerrunfile.txt

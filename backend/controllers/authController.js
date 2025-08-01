@@ -1,8 +1,10 @@
 // backend/controllers/authController.js
 import bcrypt from 'bcrypt';
-import jwt    from 'jsonwebtoken';
+import { generateToken } from '../utils/generateToken.js';
 import dotenv from 'dotenv';
 import User   from '../models/User.js';
+
+import { registerUser, loginUser, refreshAccessToken } from '../services/authService.js';
 
 dotenv.config();
 const ACCESS_TOKEN_SECRET  = process.env.ACCESS_TOKEN_SECRET  || process.env.JWT_SECRET;
@@ -14,12 +16,8 @@ const REFRESH_COOKIE_NAME  = 'refreshToken';
 
 async function issueTokens(res, userId) {
   // create tokens
-  const accessToken = jwt.sign({ id: userId }, ACCESS_TOKEN_SECRET, {
-    expiresIn: ACCESS_EXPIRES_IN
-  });
-  const refreshToken = jwt.sign({ id: userId }, REFRESH_TOKEN_SECRET, {
-    expiresIn: REFRESH_EXPIRES_IN
-  });
+  const accessToken  = generateToken( { id: userId }, ACCESS_EXPIRES_IN, ACCESS_TOKEN_SECRET );
+  const refreshToken = generateToken({ id: userId }, REFRESH_EXPIRES_IN, REFRESH_TOKEN_SECRET);
 
   // set cookies
   res

@@ -11,6 +11,12 @@ import userPostsRoutes from './routes/userPostsRoutes.js';
 import postRoutes      from './routes/postRoutes.js';
 import commentRoutes from './routes/commentRoutes.js';
 import likeRoutes from './routes/likeRoutes.js';
+import mediaRoutes     from './routes/mediaRoutes.js';
+import logger from './utils/logger.js';
+
+
+import { apiLimiter }      from './middleware/rateLimiter.js';
+import errorHandler        from './middleware/errorHandler.js';
 
 dotenv.config();
 
@@ -34,6 +40,10 @@ app.use(express.json());
 app.use(cookieParser());
 
 
+app.use(apiLimiter);
+app.use(errorHandler);
+
+
 // Public routes
 app.use('/api/auth', authRoutes);
 
@@ -55,9 +65,13 @@ app.use('/api/posts/:postId/comments', commentRoutes);
 
 app.use('/api/posts/:postId/likes', likeRoutes);
 
+app.use('/api/posts/:postId/media',    mediaRoutes);
+
+
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server listening on http://localhost:${PORT}`);
+  logger.info('Server listening on http://localhost:%d', PORT);
 });
 
 

@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
+import logger from '../utils/logger.js';
 
 dotenv.config();
 
@@ -36,7 +37,7 @@ const pool = mysql.createPool({
   try {
     // 1) Run core schema
     await pool.query(initSql);
-    console.log('Database schema initialized');
+    logger.info('Database schema initialized');
 
     // 2) Conditionally add is_admin column if it doesn't exist
     const [adminCols] = await pool.query(
@@ -53,9 +54,9 @@ const pool = mysql.createPool({
         `ALTER TABLE users
          ADD COLUMN is_admin TINYINT(1) NOT NULL DEFAULT 0`
       );
-      console.log('Added is_admin column to users table');
+      logger.info('Added is_admin column to users table');
     } else {
-      console.log('is_admin column already exists; skipping ALTER');
+      logger.info('is_admin column already exists; skipping ALTER');
     }
 
     // 3) Conditionally add tag_id column to posts if it doesn't exist
@@ -74,13 +75,13 @@ const pool = mysql.createPool({
          ADD COLUMN tag_id INT NULL,
          ADD FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE SET NULL`
       );
-      console.log('Added tag_id column to posts table');
+      logger.info('Added tag_id column to posts table');
     } else {
-      console.log('tag_id column already exists; skipping ALTER');
+      logger.info('tag_id column already exists; skipping ALTER');
     }
 
   } catch (err) {
-    console.error('Failed to initialize database:', err);
+   logger.error('Failed to initialize database:', err);
     process.exit(1);
   }
 })();
