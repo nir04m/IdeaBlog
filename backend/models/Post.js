@@ -25,17 +25,20 @@ class Post {
   static async findById(id) {
     const [rows] = await pool.execute(
       `SELECT
-         id,
-         user_id      AS userId,
-         category_id  AS categoryId,
-         tag_id       AS tagId,
-         title,
-         content,
-         image_url    AS imageUrl,
-         created_at   AS createdAt,
-         updated_at   AS updatedAt
-       FROM posts
-       WHERE id = ?`,
+         p.id,
+         p.user_id            AS userId,
+         u.username           AS authorName,
+         u.profile_picture    AS authorPicture,
+         p.category_id        AS categoryId,
+         p.tag_id             AS tagId,
+         p.title,
+         p.content,
+         p.image_url          AS imageUrl,
+         p.created_at         AS createdAt,
+         p.updated_at         AS updatedAt
+       FROM posts p
+       JOIN users u ON p.user_id = u.id
+       WHERE p.id = ?`,
       [id]
     );
     return rows[0] ?? null;
@@ -48,17 +51,20 @@ class Post {
   static async findAll() {
     const [rows] = await pool.execute(
       `SELECT
-         id,
-         user_id      AS userId,
-         category_id  AS categoryId,
-         tag_id       AS tagId,
-         title,
-         content,
-         image_url    AS imageUrl,
-         created_at   AS createdAt,
-         updated_at   AS updatedAt
-       FROM posts
-       ORDER BY created_at DESC`
+         p.id,
+         p.user_id            AS userId,
+         u.username           AS authorName,
+         u.profile_picture    AS authorPicture,
+         p.category_id        AS categoryId,
+         p.tag_id             AS tagId,
+         p.title,
+         p.content,
+         p.image_url          AS imageUrl,
+         p.created_at         AS createdAt,
+         p.updated_at         AS updatedAt
+       FROM posts p
+       JOIN users u ON p.user_id = u.id
+       ORDER BY p.created_at DESC`
     );
     return rows;
   }
@@ -71,18 +77,21 @@ class Post {
   static async findByUser(userId) {
     const [rows] = await pool.execute(
       `SELECT
-         id,
-         user_id      AS userId,
-         category_id  AS categoryId,
-         tag_id       AS tagId,
-         title,
-         content,
-         image_url    AS imageUrl,
-         created_at   AS createdAt,
-         updated_at   AS updatedAt
-       FROM posts
-       WHERE user_id = ?
-       ORDER BY created_at DESC`,
+         p.id,
+         p.user_id            AS userId,
+         u.username           AS authorName,
+         u.profile_picture    AS authorPicture,
+         p.category_id        AS categoryId,
+         p.tag_id             AS tagId,
+         p.title,
+         p.content,
+         p.image_url          AS imageUrl,
+         p.created_at         AS createdAt,
+         p.updated_at         AS updatedAt
+       FROM posts p
+       JOIN users u ON p.user_id = u.id
+       WHERE p.user_id = ?
+       ORDER BY p.created_at DESC`,
       [userId]
     );
     return rows;
