@@ -24,19 +24,20 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
-  const { mutateAsync, isLoading, error } = useMutation<
-    unknown,       // response type, e.g. tokens/session info
-    Error,         // error type
-    LoginInput     // variables
-  >(authService.login, {
+  const mutation = useMutation<unknown, Error, LoginInput>({
+    mutationFn: authService.login,
     onSuccess: () => {
       router.push("/");
     },
   });
 
-  const onSubmit = async (data: LoginInput) => {
-    await mutateAsync(data);
+  const onSubmit = (data: LoginInput) => {
+    mutation.mutate(data);
   };
+
+  // Use 'pending' here, not 'loading'
+  const loading = mutation.status === "pending";
+  const serverError = mutation.error?.message;
 
   return (
     <div className="max-w-md mx-auto p-8 bg-white rounded-lg shadow">
@@ -58,14 +59,12 @@ export default function LoginPage() {
           )}
         </div>
 
-        {error && (
-          <p className="text-red-500 text-sm">
-            {error.message || "Login failed"}
-          </p>
+        {serverError && (
+          <p className="text-red-500 text-sm">{serverError}</p>
         )}
 
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? "Logging in…" : "Log in"}
+        <Button type="submit" disabled={loading}>
+          {loading ? "Logging in…" : "Log in"}
         </Button>
       </form>
 

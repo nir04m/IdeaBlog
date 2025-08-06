@@ -17,26 +17,27 @@ export default function RegisterPage() {
   const router = useRouter();
 
   const {
-    register,
+    register: registerForm,
     handleSubmit,
     formState: { errors },
   } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
   });
 
-  const { mutateAsync, isLoading, error } = useMutation<
-    unknown,              // response type (if your API returns user or tokens, put that here)
-    Error,                // error type
-    RegisterInput         // the variables you pass to mutateAsync
-  >(authService.register, {
+  const mutation = useMutation<unknown, Error, RegisterInput>({
+    mutationFn: authService.register,
     onSuccess: () => {
       router.push("/onboarding");
     },
   });
 
-  const onSubmit = async (data: RegisterInput) => {
-    await mutateAsync(data);
+  const onSubmit = (data: RegisterInput) => {
+    mutation.mutate(data);
   };
+
+  // React Query v5 mutation statuses: "idle" | "pending" | "success" | "error"
+  const loading = mutation.status === "pending";
+  const serverError = mutation.error?.message;
 
   return (
     <div className="max-w-md mx-auto p-8 bg-white rounded-lg shadow">
@@ -44,7 +45,7 @@ export default function RegisterPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
           <Label htmlFor="username">Username</Label>
-          <Input id="username" {...register("username")} />
+          <Input id="username" {...registerForm("username")} />
           {errors.username && (
             <p className="text-red-500 text-sm">{errors.username.message}</p>
           )}
@@ -52,7 +53,7 @@ export default function RegisterPage() {
 
         <div>
           <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" {...register("email")} />
+          <Input id="email" type="email" {...registerForm("email")} />
           {errors.email && (
             <p className="text-red-500 text-sm">{errors.email.message}</p>
           )}
@@ -60,20 +61,18 @@ export default function RegisterPage() {
 
         <div>
           <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" {...register("password")} />
+          <Input id="password" type="password" {...registerForm("password")} />
           {errors.password && (
             <p className="text-red-500 text-sm">{errors.password.message}</p>
           )}
         </div>
 
-        {error && (
-          <p className="text-red-500 text-sm">
-            {error.message || "Registration failed"}
-          </p>
+        {serverError && (
+          <p className="text-red-500 text-sm">{serverError}</p>
         )}
 
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? "Signing up…" : "Sign up"}
+        <Button type="submit" disabled={loading}>
+          {loading ? "Signing up…" : "Sign up"}
         </Button>
       </form>
 
