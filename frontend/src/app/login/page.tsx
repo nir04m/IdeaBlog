@@ -1,12 +1,80 @@
-import React from 'react'
+// src/app/login/page.tsx
+"use client";
 
-const page = () => {
+import React from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { loginSchema, LoginInput } from "@/schemas/auth";
+import authService from "@/services/authService";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+
+export default function LoginPage() {
+  const router = useRouter();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const { mutateAsync, isLoading, error } = useMutation<
+    unknown,       // response type, e.g. tokens/session info
+    Error,         // error type
+    LoginInput     // variables
+  >(authService.login, {
+    onSuccess: () => {
+      router.push("/");
+    },
+  });
+
+  const onSubmit = async (data: LoginInput) => {
+    await mutateAsync(data);
+  };
+
   return (
-    <div>
-      <h1>Login</h1>
-      <a href="/api/auth/login">Login</a>
-    </div>
-  )
-}
+    <div className="max-w-md mx-auto p-8 bg-white rounded-lg shadow">
+      <h1 className="text-2xl font-bold mb-4">Log in to your account</h1>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div>
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" type="email" {...register("email")} />
+          {errors.email && (
+            <p className="text-red-500 text-sm">{errors.email.message}</p>
+          )}
+        </div>
 
-export default page
+        <div>
+          <Label htmlFor="password">Password</Label>
+          <Input id="password" type="password" {...register("password")} />
+          {errors.password && (
+            <p className="text-red-500 text-sm">{errors.password.message}</p>
+          )}
+        </div>
+
+        {error && (
+          <p className="text-red-500 text-sm">
+            {error.message || "Login failed"}
+          </p>
+        )}
+
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? "Logging in…" : "Log in"}
+        </Button>
+      </form>
+
+      <p className="mt-4 text-center text-sm text-gray-600">
+        Don’t have an account?{" "}
+        <Link href="/register" className="text-blue-600 hover:underline">
+          Sign up
+        </Link>
+      </p>
+    </div>
+  );
+}

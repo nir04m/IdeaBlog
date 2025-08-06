@@ -10,6 +10,7 @@ import postService, { Post } from "@/services/postService";
 import { ContentCard } from "@/components/cards-demo-2";
 import ExpandableCardDemo from "@/components/expandable-card-demo-standard";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
+import { LogoutButton } from "@/app/components/LogoutButton";
 
 export default function FeedPage() {
   const isAuthenticated = false;
@@ -43,6 +44,7 @@ export default function FeedPage() {
               <SidebarLink link={{ label: "Profile",   href: "/profile",   icon: <IconUserPlus /> }} />
               <SidebarLink link={{ label: "Log out",   href: "#",           icon: <IconLogin /> }} />
             </SidebarBody>
+            <LogoutButton />
           </Sidebar>
         </aside>
       ) : (
@@ -53,6 +55,7 @@ export default function FeedPage() {
           <Link href="login">
             <IconLogin   size={24} className="text-gray-600 dark:text-gray-300 hover:text-blue-500" />
           </Link>
+          <LogoutButton />
         </aside>
       )}
 
