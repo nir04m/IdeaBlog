@@ -20,4 +20,5 @@ router.get('/', getMediaForPost);
 router.post('/', authenticate, upload.single('file'), uploadMedia);
 router.delete('/:id', authenticate, deleteMedia);
 
+
 export default router;

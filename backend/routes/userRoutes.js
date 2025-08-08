@@ -3,9 +3,16 @@ import { Router } from 'express';
 import Joi from 'joi';
 import { authenticate } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
-import { getProfile, updateProfile } from '../controllers/userController.js';
+import { 
+  getProfile, 
+  updateProfile ,
+  uploadAvatar,
+  deleteAvatar
+} from '../controllers/userController.js';
+import multer from 'multer';
 
 const router = Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Validation schema for profile updates
 const profileSchema = Joi.object({
@@ -16,6 +23,21 @@ const profileSchema = Joi.object({
 
 router.get('/', authenticate, getProfile);
 router.put('/', authenticate, validateBody(profileSchema), updateProfile);
+
+// POST /api/media/avatar
+router.post(
+  '/avatar',
+   authenticate,
+   upload.single('file'),
+   uploadAvatar
+);
+
+// (optionally) DELETE /api/media/avatar
+router.delete(
+  '/avatar',
+  authenticate,
+  deleteAvatar
+);
 
 export default router;
 

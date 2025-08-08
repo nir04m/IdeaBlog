@@ -35,53 +35,62 @@ export default function RegisterPage() {
     mutation.mutate(data);
   };
 
-  // React Query v5 mutation statuses: "idle" | "pending" | "success" | "error"
+  // React Query v5 statuses: "idle" | "pending" | "success" | "error"
   const loading = mutation.status === "pending";
   const serverError = mutation.error?.message;
 
   return (
-    <div className="max-w-md mx-auto p-8 bg-white rounded-lg shadow">
-      <h1 className="text-2xl font-bold mb-4">Create your account</h1>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div>
-          <Label htmlFor="username">Username</Label>
-          <Input id="username" {...registerForm("username")} />
-          {errors.username && (
-            <p className="text-red-500 text-sm">{errors.username.message}</p>
+    <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="w-full max-w-md p-8 bg-white rounded-lg shadow">
+        <h1 className="text-2xl font-bold mb-4 text-center">
+          Create your account
+        </h1>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div>
+            <Label htmlFor="username">Username</Label>
+            <Input id="username" {...registerForm("username")} />
+            {errors.username && (
+              <p className="text-red-500 text-sm">{errors.username.message}</p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" type="email" {...registerForm("email")} />
+            {errors.email && (
+              <p className="text-red-500 text-sm">{errors.email.message}</p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              {...registerForm("password")}
+            />
+            {errors.password && (
+              <p className="text-red-500 text-sm">{errors.password.message}</p>
+            )}
+          </div>
+
+          {serverError && (
+            <p className="text-red-500 text-sm">{serverError}</p>
           )}
-        </div>
 
-        <div>
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" {...registerForm("email")} />
-          {errors.email && (
-            <p className="text-red-500 text-sm">{errors.email.message}</p>
-          )}
-        </div>
+          <Button type="submit" disabled={loading} className="w-full">
+            {loading ? "Signing up…" : "Sign up"}
+          </Button>
+        </form>
 
-        <div>
-          <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" {...registerForm("password")} />
-          {errors.password && (
-            <p className="text-red-500 text-sm">{errors.password.message}</p>
-          )}
-        </div>
-
-        {serverError && (
-          <p className="text-red-500 text-sm">{serverError}</p>
-        )}
-
-        <Button type="submit" disabled={loading}>
-          {loading ? "Signing up…" : "Sign up"}
-        </Button>
-      </form>
-
-      <p className="mt-4 text-center text-sm text-gray-600">
-        Already have an account?{" "}
-        <Link href="/login" className="text-blue-600 hover:underline">
-          Log in
-        </Link>
-      </p>
+        <p className="mt-4 text-center text-sm text-gray-600">
+          Already have an account?{" "}
+          <Link href="/login" className="text-blue-600 hover:underline">
+            Log in
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }
