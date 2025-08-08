@@ -67,7 +67,7 @@ export async function uploadAvatar(req, res, next) {
     });
 
     // 3) persist it to the user
-    await User.updateProfilePicture(req.user.id, url);
+    await User.updateProfile(req.user.id, { profilePicture: url });
 
     // 4) respond with exactly `{ url }`
     res.json({ url });

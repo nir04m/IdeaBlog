@@ -18,10 +18,11 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { AxiosResponse } from "axios";
 
-// 1) Zod schema for onboarding form
+// 1) Zod schema
 const onboardingSchema = z.object({
-  bio: z.string().max(160, "Bio must be 160 characters or less"),
-  avatarUrl: z.string().url().optional(),
+  bio: z.string().max(160, "…"),
+  // change name here
+  profilePicture: z.string().url().optional(),
 });
 type OnboardingInput = z.infer<typeof onboardingSchema>;
 
@@ -59,7 +60,7 @@ export default function OnboardingPage() {
     resolver: zodResolver(onboardingSchema),
     defaultValues: {
       bio: "",
-      avatarUrl: user?.profilePicture ?? "",
+      profilePicture: user?.profilePicture ?? "",
     },
   });
 
@@ -67,7 +68,7 @@ export default function OnboardingPage() {
   useEffect(() => {
     if (user?.profilePicture) {
       setPreview(user.profilePicture);
-      setValue("avatarUrl", user.profilePicture);
+      setValue("profilePicture", user.profilePicture);
     }
   }, [user, setValue]);
 
@@ -88,14 +89,14 @@ export default function OnboardingPage() {
     setPreview(URL.createObjectURL(file));
     // upload to your R2 via the service
     const { url } = await onboardingService.uploadAvatar(file);
-    // set the form’s hidden avatarUrl to the new public URL
-    setValue("avatarUrl", url);
+    // set the form’s hidden profilePicture to the new public URL
+    setValue("profilePicture", url);
   };
 
   // 8) onSubmit: if they've never set an avatar, give them a random one
   const onSubmit = (data: OnboardingInput) => {
-    if (!data.avatarUrl) {
-      data.avatarUrl = getRandomAvatar();
+    if (!data.profilePicture) {
+      data.profilePicture = getRandomAvatar();
     }
     mutation.mutate(data);
   };
@@ -167,8 +168,8 @@ export default function OnboardingPage() {
             )}
           </div>
 
-          {/* hidden field for avatarUrl */}
-          <input type="hidden" {...register("avatarUrl")} />
+          {/* hidden field for profilePicture */}
+          <input type="hidden" {...register("profilePicture")} />
 
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Saving…" : "Save Profile"}
