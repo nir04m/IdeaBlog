@@ -1,16 +1,10 @@
-// src/app/onboarding/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
-
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import userService, { UserProfile } from "@/services/userService";
 import onboardingService from "@/services/onboardingService";
 import { Input } from "@/components/ui/input";
@@ -20,8 +14,7 @@ import { AxiosResponse } from "axios";
 
 // 1) Zod schema
 const onboardingSchema = z.object({
-  bio: z.string().max(160, "…"),
-  // change name here
+  bio: z.string().max(160, "Bio must be 160 characters or less"),
   profilePicture: z.string().url().optional(),
 });
 type OnboardingInput = z.infer<typeof onboardingSchema>;
@@ -45,12 +38,7 @@ export default function OnboardingPage() {
     queryFn: () => userService.getProfile(),
   });
 
-  // 4) Set initial preview to existing picture or a random one
-  const [preview, setPreview] = useState<string>(
-    user?.profilePicture ?? getRandomAvatar()
-  );
-
-  // 5) Form setup
+  // 4) Form setup with empty defaults (we’ll patch them in useEffect)
   const {
     register,
     handleSubmit,
@@ -60,40 +48,57 @@ export default function OnboardingPage() {
     resolver: zodResolver(onboardingSchema),
     defaultValues: {
       bio: "",
-      profilePicture: user?.profilePicture ?? "",
+      profilePicture: "",
     },
   });
 
-  // When user data arrives, overwrite preview + form value if they already have one
+  // 5) Preview state starts blank (will fill in after user loads)
+  const [preview, setPreview] = useState<string>("");
+
+  // 6) Once `user` arrives, seed preview + form values
   useEffect(() => {
-    if (user?.profilePicture) {
-      setPreview(user.profilePicture);
-      setValue("profilePicture", user.profilePicture);
-    }
+    if (!user) return;
+
+    // a) Set bio field
+    setValue("bio", user.bio ?? "");
+
+    // b) Decide which picture to preview:
+    //    • existing user.photo, or
+    //    • random fallback
+    const pic = user.profilePicture ?? getRandomAvatar();
+    setPreview(pic);
+
+    // c) Store it in the hidden form field
+    setValue("profilePicture", pic);
   }, [user, setValue]);
 
-  // 6) Mutation to complete onboarding
+  // 7) Mutation to complete onboarding
   const mutation = useMutation<AxiosResponse<any>, Error, OnboardingInput>({
-  mutationFn: onboardingService.completeOnboarding,
-  onSuccess: () => {
-    qc.invalidateQueries({ queryKey: ["user","me"] });
-    window.location.href = "/";
-  },
-});
+    mutationFn: onboardingService.completeOnboarding,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["user", "me"] });
+      window.location.href = "/feed";
+    },
+  });
 
-  // 7) Handle file input → preview → upload → set form value
+  // 8) Handle file input → preview → upload → set form value
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     // show local preview immediately
-    setPreview(URL.createObjectURL(file));
-    // upload to your R2 via the service
+    const objectUrl = URL.createObjectURL(file);
+    setPreview(objectUrl);
+
+    // upload to R2 and get back a permanent URL
     const { url } = await onboardingService.uploadAvatar(file);
-    // set the form’s hidden profilePicture to the new public URL
+
+    // overwrite our preview + hidden field
+    setPreview(url);
     setValue("profilePicture", url);
   };
 
-  // 8) onSubmit: if they've never set an avatar, give them a random one
+  // 9) onSubmit: guard for missing profilePicture
   const onSubmit = (data: OnboardingInput) => {
     if (!data.profilePicture) {
       data.profilePicture = getRandomAvatar();
@@ -101,23 +106,28 @@ export default function OnboardingPage() {
     mutation.mutate(data);
   };
 
+  // 10) Loading / error states
   if (userLoading) {
     return <p className="p-8 text-center">Loading your profile…</p>;
   }
   if (userError || !user) {
-    return <p className="p-8 text-red-500 text-center">Failed to load user.</p>;
+    return (
+      <p className="p-8 text-red-500 text-center">
+        Failed to load user.
+      </p>
+    );
   }
 
-  const loading = mutation.status === "pending";
+  const saving =  mutation.status === "pending";
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
-      <div className="w-full max-w-lg bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-6">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 text-center">
+    <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
+      <div className="w-full max-w-lg bg-white rounded-lg shadow p-6 space-y-6">
+        <h1 className="text-2xl font-bold text-center">
           Complete Your Profile
         </h1>
 
-        {/* Avatar uploader */}
+        {/* Avatar preview & upload */}
         <div className="flex flex-col items-center">
           <div className="h-24 w-24 rounded-full overflow-hidden bg-gray-200">
             {preview ? (
@@ -151,7 +161,7 @@ export default function OnboardingPage() {
               id="username"
               value={user.username}
               readOnly
-              className="bg-gray-100 dark:bg-gray-700"
+              className="bg-gray-100"
             />
           </div>
 
@@ -161,7 +171,7 @@ export default function OnboardingPage() {
               id="bio"
               {...register("bio")}
               rows={4}
-              className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
             />
             {errors.bio && (
               <p className="text-red-500 text-sm">{errors.bio.message}</p>
@@ -171,8 +181,8 @@ export default function OnboardingPage() {
           {/* hidden field for profilePicture */}
           <input type="hidden" {...register("profilePicture")} />
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Saving…" : "Save Profile"}
+          <Button type="submit" className="w-full" disabled={saving}>
+            {saving ? "Saving…" : "Save Profile"}
           </Button>
         </form>
       </div>
