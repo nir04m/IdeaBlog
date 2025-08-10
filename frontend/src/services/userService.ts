@@ -21,4 +21,10 @@ export default {
     const res = await api.get<{ user: UserProfile }>("/user");
     return res.data.user;
   },
+
+  logout: () => api.post('/auth/logout'),
 };
+
+
+
+

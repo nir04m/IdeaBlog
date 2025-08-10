@@ -1,5 +1,3 @@
-// src/services/postService.ts
-
 import axios from "axios";
 
 export interface Post {
@@ -12,7 +10,16 @@ export interface Post {
   imageUrl: string | null;
   createdAt: string;
   updatedAt: string;
+  authorName: string;
+  authorPicture: string;
 }
+
+export type NewPostInput  = {
+  title: string;
+  content: string;
+  categoryId: number;
+  imageUrl?: string | null;
+};
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
@@ -20,16 +27,20 @@ const api = axios.create({
 });
 
 const postService = {
-  /** GET http://localhost:5000/api/posts → { posts: Post[] } */
   getAllPosts: async (): Promise<Post[]> => {
     const res = await api.get<{ posts: Post[] }>("/posts");
     return res.data.posts;
   },
 
-  /** GET http://localhost:5000/api/posts/:id → { post: Post } */
   getPostById: async (id: number): Promise<Post> => {
     const res = await api.get<{ post: Post }>(`/posts/${id}`);
     return res.data.post;
+  },
+
+  // accept the lean payload, not the full Post
+  create: async (data: NewPostInput ) => {
+    const res = await api.post("/posts", data);
+    return res.data;
   },
 };
 

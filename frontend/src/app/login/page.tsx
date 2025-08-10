@@ -27,7 +27,7 @@ export default function LoginPage() {
   const mutation = useMutation<unknown, Error, LoginInput>({
     mutationFn: authService.login,
     onSuccess: () => {
-      router.push("/");
+      router.push("/feed");
     },
   });
 

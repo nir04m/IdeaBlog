@@ -21,7 +21,7 @@ export async function uploadToR2({ key, body, contentType }) {
     ContentType: contentType,
   }));
   // return `https://${process.env.CF_ACCOUNT_ID}.r2.cloudflarestorage.com/${process.env.CF_R2_BUCKET}/${key}`;
-  return `https://pub-f18cdd5a7c714e1aa1fee0cc02c6443f.r2.dev/${process.env.CF_R2_BUCKET}/${key}`;
+  return `https://pub-f18cdd5a7c714e1aa1fee0cc02c6443f.r2.dev/${key}`;
 }
 
 // Delete object from R2

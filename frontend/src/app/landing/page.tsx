@@ -1,10 +1,10 @@
 "use client";
 
-import { ImagesSlider } from "@/app/components/ui/images-slider";
+import { ImagesSlider } from "@/components/ui/images-slider";
 import { motion } from "framer-motion";
-import { TypewriterEffectSmooth } from "@/app/components/ui/typewriter-effect";
+import { TypewriterEffectSmooth } from "@/components/ui/typewriter-effect";
 import Link from "next/link";
-import { Button } from "@/app/components/ui/button";
+import { Button } from "@/components/ui/button";
 
 export default function HeroTypewriterWithSlider() {
   const images = ["/Hero1.png", "/Hero2.png", "/Hero3.png"];

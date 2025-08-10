@@ -1,29 +1,91 @@
-// src/app/feed/page.tsx
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
-import { IconUserPlus, IconLogin, IconSun } from "@tabler/icons-react";
+import { motion } from "motion/react";
+import {
+  IconArrowLeft,
+  IconBrandTabler,
+  IconSettings,
+  IconUserBolt,
+  IconUserPlus,
+  IconLogin,
+  IconSquareRoundedPlus,
+} from "@tabler/icons-react";
 
 import postService, { Post } from "@/services/postService";
+import userService, { UserProfile } from "@/services/userService";
 import { ContentCard } from "@/components/cards-demo-2";
 import ExpandableCardDemo from "@/components/expandable-card-demo-standard";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
-import { LogoutButton } from "@/app/components/LogoutButton";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
+
+/* ---------- Brand ----------- */
+
+const Brand = ({ showText }: { showText: boolean }) => (
+  <a
+    href="/feed"
+    className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal"
+  >
+    <div className="h-5 w-6 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-black dark:bg-white" />
+    {showText && (
+      <motion.span
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="whitespace-pre font-medium text-black dark:text-white"
+      >
+        IdeaBlog
+      </motion.span>
+    )}
+  </a>
+);
+
+/* ---------- Page ----------- */
 
 export default function FeedPage() {
-  const isAuthenticated = false;
+  const qc = useQueryClient();
+  const router = useRouter();
+  
+  //logout 
+  const logoutMutation = useMutation({
+    // use the fixed service
+    mutationFn: userService.logout,
+    onSuccess: () => {
+      qc.clear();
+      localStorage.clear();
+      router.push('/feed');
+    },
+    onError: (err: any) => {
+      console.error(err?.response?.data || err);
+      alert('Logout failed');
+    },
+  });
 
-  const { data, isLoading, isError } = useQuery<Post[]>({
+  // Posts
+  const { data: postsData, isLoading, isError } = useQuery<Post[]>({
     queryKey: ["posts", "all"],
     queryFn: postService.getAllPosts,
     staleTime: 1000 * 60 * 5,
   });
+  const posts = Array.isArray(postsData) ? postsData : [];
 
-  const posts = Array.isArray(data) ? data : [];
+  // User (optional – do not hard fail on 401)
+  const { data: user } = useQuery<UserProfile | null>({
+    queryKey: ["user", "me", "optional"],
+    queryFn: async () => {
+      try {
+        return await userService.getProfile();
+      } catch (err: any) {
+        if (err?.response?.status === 401) return null;
+        throw err;
+      }
+    },
+    retry: false,
+  });
+  const isAuthenticated = !!user;
 
-  // shuffle once per render and pick 3
+  // Recs
   const recommended = useMemo(() => {
     const copy = [...posts];
     for (let i = copy.length - 1; i > 0; i--) {
@@ -33,52 +95,147 @@ export default function FeedPage() {
     return copy.slice(0, 3);
   }, [posts]);
 
+  // Sidebar open state
+  const [open, setOpen] = useState(false);
+
+  // add this type locally so we can attach an action
+  type NavLink = {
+    label: string;
+    href: string;
+    icon: React.ReactNode;
+    action?: "logout";
+  };
+
+  // ── Sidebar links
+  const authedLinks: NavLink[] = [
+    {
+      label: "Dashboard",
+      href: "/dashboard",
+      icon: <IconBrandTabler className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />,
+    },
+    {
+      label: "Edit Profile",
+      href: "/profile",
+      icon: <IconUserBolt className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />,
+    },
+    {
+      label: "Create Post",
+      href: "/posts/new",              // ← change to your route if different (e.g. "/create-post")
+      icon: <IconSquareRoundedPlus className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />,
+    },
+    {
+      label: "Settings",
+      href: "/settings",
+      icon: <IconSettings className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />,
+    },
+    {
+      label: "Logout",
+      href: "#",
+      icon: <IconArrowLeft className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />,
+      action: "logout",
+    },
+  ];
+
+  const guestLinks = [
+    {
+      label: "Register",
+      href: "/register",
+      icon: (
+        <IconUserPlus className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+      ),
+    },
+    {
+      label: "Login",
+      href: "/login",
+      icon: (
+        <IconLogin className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+      ),
+    },
+  ];
+
+  const avatar = user?.profilePicture || "/user.png"; // fallback to public/user.png
+
+  const SB_COLLAPSED = 56;  // ~ w-14 (icons only)
+  const SB_EXPANDED  = 256; // ~ w-64 (text + icons)
+
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* ─── SIDEBAR ───────────────────────────────────────────── */}
-      {isAuthenticated ? (
-        <aside className="hidden md:block w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
-          <Sidebar>
-            <SidebarBody className="flex flex-col justify-between h-full p-4">
-              <SidebarLink link={{ label: "Dashboard", href: "/dashboard", icon: <IconSun /> }} />
-              <SidebarLink link={{ label: "Profile",   href: "/profile",   icon: <IconUserPlus /> }} />
-              <SidebarLink link={{ label: "Log out",   href: "#",           icon: <IconLogin /> }} />
+      <aside
+        data-open={open}
+        // this element has the white background + border AND the width animation,
+        // so the “white strip” always matches the sidebar’s size
+        className={[
+          "hidden md:block sticky top-0 h-screen shrink-0 overflow-hidden group",
+          "bg-white dark:bg-gray-800",
+          "border-r border-gray-200 dark:border-gray-700",
+          "transition-[width] duration-300 ease-in-out",
+        ].join(" ")}
+        // bind width to `open`
+        style={{ width: open ? SB_EXPANDED : SB_COLLAPSED }}
+      >
+        {/* Make the inner sidebar fill the shell */}
+        <div className="h-full w-full">
+          <Sidebar open={open} setOpen={setOpen}>
+            <SidebarBody className="justify-between gap-10">
+              <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
+                {open ? <Brand showText /> : <Brand showText={false} />}
+
+                <div className="mt-8 flex flex-col gap-2">
+                  {(isAuthenticated ? authedLinks : guestLinks).map((link, idx) => {
+                    const isLogout = (link as any).action === "logout";
+                    const content = <SidebarLink key={idx} link={link} />;
+                    return isLogout ? (
+                      <div
+                        key={idx}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          logoutMutation.mutate();
+                        }}
+                      >
+                        {content}
+                      </div>
+                    ) : (
+                      content
+                    );
+                  })}
+                </div>
+              </div>
+
+              {isAuthenticated ? (
+                <SidebarLink
+                  link={{
+                    label: user!.username,
+                    href: "/profile",
+                    icon: (
+                      <img
+                        src={avatar}
+                        className="h-7 w-7 shrink-0 rounded-full object-cover"
+                        width={28}
+                        height={28}
+                        alt="Avatar"
+                      />
+                    ),
+                  }}
+                />
+              ) : (
+                <SidebarLink
+                  link={{
+                    label: "IdeaBlog",
+                    href: "/",
+                    icon: <div className="h-7 w-7 rounded-md bg-black dark:bg-white" />,
+                  }}
+                />
+              )}
             </SidebarBody>
-            <LogoutButton />
           </Sidebar>
-        </aside>
-      ) : (
-        <aside className="hidden md:flex flex-col items-center justify-center w-16 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 space-y-6 py-4">
-          <Link href="/register">
-            <IconUserPlus size={24} className="text-gray-600 dark:text-gray-300 hover:text-blue-500" />
-          </Link>
-          <Link href="login">
-            <IconLogin   size={24} className="text-gray-600 dark:text-gray-300 hover:text-blue-500" />
-          </Link>
-          <LogoutButton />
-        </aside>
-      )}
+        </div>
+      </aside>
 
-      {/* ─── MAIN CONTENT ───────────────────────────────────────── */}
+      {/* ─── MAIN CONTENT (no Home/Search header) ──────────────── */}
       <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <header className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center">
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Home</h1>
-          <div className="flex-1 mx-8">
-            <input
-              type="text"
-              placeholder="Search posts..."
-              className="w-full px-4 py-2 rounded-lg border bg-gray-100 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <button aria-label="Toggle theme" className="p-2">
-            <IconSun size={20} className="text-gray-600 dark:text-gray-300" />
-          </button>
-        </header>
-
-        {/* Content */}
         <div className="flex-1 flex flex-col md:flex-row">
-          {/* ─ Feed Grid ─ */}
+          {/* Feed Grid */}
           <section className="flex-1 p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
             {isLoading ? (
               <p>Loading posts…</p>
@@ -108,7 +265,7 @@ export default function FeedPage() {
             )}
           </section>
 
-          {/* ─ Recommended Sidebar ─ */}
+          {/* Recommended Sidebar */}
           <aside className="w-full md:w-80 p-6 border-t md:border-t-0 md:border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
             <h2 className="text-2xl font-semibold mb-4 text-gray-800 dark:text-gray-100">
               Recommended Blogs

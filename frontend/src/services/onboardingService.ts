@@ -7,7 +7,7 @@ const api = axios.create({
 
 export default {
   completeOnboarding: (payload: { bio: string; profilePicture?: string }) =>
-    api.put('/user', payload),
+  api.put('/user', payload),
 
   uploadAvatar: (file: File): Promise<{ url: string }> => {
     const form = new FormData()
