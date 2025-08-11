@@ -14,12 +14,25 @@ export interface Post {
   authorPicture: string;
 }
 
-export type NewPostInput  = {
+export interface CreatePostInput {
+  title: string;
+  content: string;
+  categoryId: number;
+  imageUrl?: string;
+}
+
+export interface CreatedPostResponse {
+  // support either shape from your backend
+  postId?: number;
+  post?: { id: number; imageUrl?: string | null };
+}
+
+export type UpdatePostInput = {
   title: string;
   content: string;
   categoryId: number;
   imageUrl?: string | null;
-};
+}
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
@@ -38,10 +51,27 @@ const postService = {
   },
 
   // accept the lean payload, not the full Post
-  create: async (data: NewPostInput ) => {
+  create: async (data: CreatePostInput): Promise<CreatedPostResponse> => {
     const res = await api.post("/posts", data);
     return res.data;
   },
+
+  // update imageUrl after media upload
+  updateImage: async (postId: number, imageUrl: string) => {
+    const res = await api.put(`/posts/${postId}`, { imageUrl });
+    return res.data;
+  },
+
+  getByUser: async (userId: number): Promise<Post[]> => {
+    const res = await api.get<{ posts: Post[] }>(`/users/${userId}/posts`);
+    return res.data.posts;
+  },
+
+  update: async (id: number, data: UpdatePostInput) => {
+    const res = await api.put(`/posts/${id}`, data);
+    return res.data;
+  },
+
 };
 
 export default postService;

@@ -333,7 +333,7 @@ interface ExpandableCardDemoProps {
 
 export default function ExpandableCardDemo({ post }: ExpandableCardDemoProps) {
   const [active, setActive] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDivElement>(null!);
   const id = useId();
 
   useEffect(() => {
@@ -415,7 +415,7 @@ export default function ExpandableCardDemo({ post }: ExpandableCardDemoProps) {
               <div className="p-6">
                 <h3 className="font-bold text-2xl mb-2">{post.title}</h3>
                 <p className="text-gray-700 dark:text-gray-300 mb-4">
-                  {post.content}
+                  {post.content.slice(0, 120)}...
                 </p>
 
                 {/* 🎯 FIXED Link: no inner <a> */}

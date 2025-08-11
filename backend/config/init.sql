@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS post_categories (
   FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
 );
 
+-- 8) Comments table
 CREATE TABLE IF NOT EXISTS comments (
   id          INT AUTO_INCREMENT PRIMARY KEY,
   post_id     INT          NOT NULL,
@@ -83,6 +84,16 @@ CREATE TABLE IF NOT EXISTS likes (
   PRIMARY KEY (post_id, user_id),
   FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- 10) Media table (stores uploaded files for posts)
+CREATE TABLE IF NOT EXISTS media (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  post_id     INT          NOT NULL,
+  file_url    VARCHAR(255) NOT NULL,
+  file_type   VARCHAR(100),
+  uploaded_at TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
 );
 
 

@@ -1,6 +1,7 @@
 // backend/controllers/mediaController.js
 import Media from '../models/Media.js';
 import Post  from '../models/Post.js';
+import { extractR2KeyFromUrl } from '../services/r2Key.js';
 import { uploadToR2, deleteFromR2 } from '../services/mediaService.js';
 import crypto from 'crypto';
 
@@ -9,6 +10,7 @@ export const uploadMedia = async (req, res, next) => {
     const postId = Number(req.params.postId);
     const userId = req.user.id;
     const post   = await Post.findById(postId);
+    
     if (!post) return res.status(404).json({ error: 'Post not found' });
 
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
@@ -27,6 +29,10 @@ export const uploadMedia = async (req, res, next) => {
     // record in DB
     const mediaId = await Media.create({ postId, userId, url, type: req.file.mimetype });
     const media   = await Media.findById(mediaId);
+
+    // 🔽 also update the post’s image_url so the cover shows up
+    await Post.setImageUrl(postId, url);
+
     res.status(201).json({ message: 'Media uploaded', media });
   } catch (err) {
     next(err);
@@ -48,18 +54,11 @@ export const deleteMedia = async (req, res, next) => {
     const mediaId = Number(req.params.id);
     const record  = await Media.findById(mediaId);
     if (!record) return res.status(404).json({ error: 'Media not found' });
-    if (req.user.id !== record.userId) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
+    if (req.user.id !== record.userId) return res.status(403).json({ error: 'Forbidden' });
 
-    // extract R2 key from URL
-    const urlParts = new URL(record.url);
-    const key = urlParts.pathname.replace(`/${process.env.CF_R2_BUCKET}/`, '');
-
-    // delete from R2
+    const key = extractR2KeyFromUrl(record.url);
     await deleteFromR2({ key });
 
-    // delete DB record
     await Media.delete(mediaId);
     res.json({ message: 'Media deleted' });
   } catch (err) {

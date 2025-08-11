@@ -1,30 +1,29 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 
-import SidebarLayout from "@/app/components/layout/SidebarLayout";
-
-import postService, { CreatePostInput } from "@/services/postService";
-import mediaService from "@/services/mediaService";
+import postService, { UpdatePostInput } from "@/services/postService";
 import categoriesService, { Category } from "@/services/categoriesService";
-import userService, { UserProfile } from "@/services/userService";
+import mediaService, { getUploadedUrl } from "@/services/mediaService";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
+  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChevronsUpDown } from "lucide-react";
 import { FileUpload } from "@/components/ui/file-upload";
+import SidebarLayout from "@/app/components/layout/SidebarLayout";
+import userService, { UserProfile } from "@/services/userService";
 
 /* ---------- Validation ---------- */
 const schema = z.object({
@@ -35,33 +34,11 @@ const schema = z.object({
 });
 type FormInput = z.infer<typeof schema>;
 
-export default function NewPostPage() {
-  const router = useRouter();
+export default function EditPostPage() {
   const qc = useQueryClient();
-
-  // optional user for sidebar (don’t hard-fail on 401)
-  const { data: user } = useQuery<UserProfile | null>({
-    queryKey: ["user", "me", "optional"],
-    queryFn: async () => {
-      try {
-        return await userService.getProfile();
-      } catch (err: any) {
-        if (err?.response?.status === 401) return null;
-        throw err;
-      }
-    },
-    retry: false,
-  });
-
-  // logout for sidebar
-  const logoutMutation = useMutation({
-    mutationFn: userService.logout,
-    onSuccess: () => {
-      qc.clear();
-      localStorage.clear();
-      router.push("/feed");
-    },
-  });
+  const router = useRouter();
+  const { id } = useParams<{ id: string }>();
+  const postId = Number(id);
 
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -69,8 +46,39 @@ export default function NewPostPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
-  // Categories
-  const { data: categories, isLoading: loadingCats } = useQuery({
+  // user (optional)
+    const { data: user } = useQuery<UserProfile | null>({
+      queryKey: ["user", "me", "optional"],
+      queryFn: async () => {
+        try {
+          return await userService.getProfile();
+        } catch (err: any) {
+          if (err?.response?.status === 401) return null;
+          throw err;
+        }
+      },
+      retry: false,
+    });
+  
+    // logout
+    const logoutMutation = useMutation({
+      mutationFn: userService.logout,
+      onSuccess: () => {
+        qc.clear();
+        localStorage.clear();
+        router.push("/feed");
+      },
+    });
+
+  // Load post
+  const postQ = useQuery({
+    queryKey: ["posts", postId],
+    queryFn: () => postService.getPostById(postId),
+    enabled: Number.isFinite(postId) && postId > 0,
+  });
+
+  // Load categories
+  const catsQ = useQuery({
     queryKey: ["categories", "all"],
     queryFn: categoriesService.list,
     staleTime: 1000 * 60 * 5,
@@ -81,6 +89,7 @@ export default function NewPostPage() {
     register,
     handleSubmit,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<FormInput>({
     resolver: zodResolver(schema),
@@ -92,65 +101,103 @@ export default function NewPostPage() {
     },
   });
 
-  // FileUpload: preview now, upload later on submit
+  // When post loads, hydrate form + preview
+  useEffect(() => {
+    if (!postQ.data) return;
+    const p = postQ.data;
+    reset({
+      title: p.title ?? "",
+      content: p.content ?? "",
+      categoryId: p.categoryId ?? 0,
+      imageUrl: p.imageUrl ?? "",
+    });
+    setCoverPreview(p.imageUrl ?? null);
+
+    // pre-select category if we have it
+    if (catsQ.data) {
+      const match = catsQ.data.find((c) => c.id === p.categoryId) || null;
+      setSelectedCategory(match);
+    }
+  }, [postQ.data, catsQ.data, reset]);
+
+  // FileUpload “preview-only” uploader: stash File and show local preview
   const previewOnlyUploader = async (file: File) => {
     setPendingFile(file);
     const local = URL.createObjectURL(file);
     setCoverPreview(local);
-    return local; // for the dropzone preview
+    return local;
   };
 
-  const onSubmit: SubmitHandler<FormInput> = async (data) => {
+  const onSubmit: SubmitHandler<FormInput> = async (values) => {
     setSubmitting(true);
     setErrMsg(null);
 
     try {
-      // 1) create post (without image)
-      const created = await postService.create({
-        title: data.title,
-        content: data.content,
-        categoryId: data.categoryId,
-      } as CreatePostInput);
+      let newImageUrl: string | undefined = values.imageUrl || undefined;
 
-      const postId =
-        created.post?.id ??
-        created.postId ??
-        (() => {
-          throw new Error("Create post response missing post id");
-        })();
-
-      // 2) upload image if selected
       if (pendingFile) {
-        await mediaService.uploadForPost(postId, pendingFile);
-        // if your backend does NOT copy url to posts.image_url automatically,
-        // uncomment next line and implement postService.updateImage on the API:
-        // await postService.updateImage(postId, media.url);
+        // 1) remove last media (if any)
+        try {
+          const existing = await mediaService.listForPost(postId);
+          if (existing.length > 0) {
+            const last = existing[existing.length - 1]; // assume sorted old→new
+            await mediaService.deleteMedia(last.id);
+          }
+        } catch (e) {
+          // non-fatal; continue
+          console.warn("Deleting previous media failed (continuing):", e);
+        }
+
+        // 2) upload new file
+        const uploaded = await mediaService.uploadForPost(postId, pendingFile);
+        newImageUrl = getUploadedUrl(uploaded);
       }
 
-      router.push("/feed");
+      // 3) update post
+      const payload: UpdatePostInput = {
+        title: values.title,
+        content: values.content,
+        categoryId: values.categoryId,
+        imageUrl: newImageUrl ?? null,
+      };
+
+      await postService.update(postId, payload);
+      router.push(`/posts/${postId}`);
     } catch (err: any) {
       console.error(err);
-      setErrMsg(err?.response?.data?.error || "Failed to publish post");
+      setErrMsg(err?.response?.data?.error || "Failed to update post");
       setSubmitting(false);
     }
   };
 
-  const catButtonLabel = selectedCategory?.name ?? "Select category";
+  const catButtonLabel = useMemo(
+    () => selectedCategory?.name ?? "Select category",
+    [selectedCategory]
+  );
+
+  const loading = postQ.isLoading || catsQ.isLoading;
+  const loadError = postQ.isError;
 
   return (
     <SidebarLayout
-      user={user ?? null}
-      onLogout={() => logoutMutation.mutate()}
-      initialOpen={false}
-    >
-      {/* page content */}
-      <main className="w-full">
-        <div className="bg-gray-50 dark:bg-gray-900 py-10 px-4">
-          <div className="mx-auto w-full max-w-3xl rounded-lg border bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-800">
-            <h1 className="mb-6 text-2xl font-semibold text-gray-900 dark:text-gray-100">
-              Create a new post
-            </h1>
+          user={user ?? null}
+          onLogout={() => logoutMutation.mutate()}
+          initialOpen={false}
+        >
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-10 px-4">
+        <div className="mx-auto w-full max-w-3xl rounded-lg border bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-800">
+          <h1 className="mb-6 text-2xl font-semibold text-gray-900 dark:text-gray-100">
+            Edit post
+          </h1>
 
+          {loading && <p>Loading…</p>}
+          {loadError && (
+            <p className="text-red-500">
+              Couldn’t load the post. (Are you logged in / allowed to edit?)
+            </p>
+          )}
+
+          {!loading && !loadError && (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               {errMsg && (
                 <p className="text-sm text-red-500 bg-red-50 dark:bg-red-950/30 rounded p-2">
@@ -161,7 +208,7 @@ export default function NewPostPage() {
               {/* Title */}
               <div className="space-y-2">
                 <Label htmlFor="title">Title</Label>
-                <Input id="title" placeholder="My awesome post…" {...register("title")} />
+                <Input id="title" placeholder="Post title…" {...register("title")} />
                 {errors.title && <p className="text-sm text-blue-500">{errors.title.message}</p>}
               </div>
 
@@ -172,7 +219,7 @@ export default function NewPostPage() {
                   id="content"
                   rows={8}
                   className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900"
-                  placeholder="Write your story…"
+                  placeholder="Update your story…"
                   {...register("content")}
                 />
                 {errors.content && <p className="text-sm text-blue-500">{errors.content.message}</p>}
@@ -187,7 +234,7 @@ export default function NewPostPage() {
                       type="button"
                       variant="outline"
                       className="w-full justify-between"
-                      disabled={loadingCats}
+                      disabled={catsQ.isLoading}
                     >
                       {catButtonLabel}
                       <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
@@ -197,7 +244,7 @@ export default function NewPostPage() {
                     align="start"
                     className="w-[--radix-dropdown-menu-trigger-width] max-h-64 overflow-auto"
                   >
-                    {(categories ?? []).map((cat) => (
+                    {(catsQ.data ?? []).map((cat) => (
                       <DropdownMenuItem
                         key={cat.id}
                         onClick={() => {
@@ -216,12 +263,12 @@ export default function NewPostPage() {
                 )}
               </div>
 
-              {/* Cover image */}
+              {/* Cover image (preview now, upload on save) */}
               <div className="space-y-2">
                 <Label>Cover image</Label>
                 <FileUpload
                   uploader={previewOnlyUploader}
-                  onUploadComplete={(url) => setCoverPreview(url)}
+                  onUploadComplete={(url) => setCoverPreview(url ?? null)}
                 />
                 {coverPreview && (
                   <img
@@ -232,16 +279,23 @@ export default function NewPostPage() {
                 )}
               </div>
 
-              {/* Submit */}
-              <div className="pt-2">
-                <Button type="submit" className="w-full" disabled={submitting}>
-                  {submitting ? "Publishing…" : "Publish Post"}
+              {/* Actions */}
+              <div className="pt-2 flex gap-3">
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? "Saving…" : "Save changes"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.push(`/posts/${postId}`)}
+                >
+                  Cancel
                 </Button>
               </div>
             </form>
-          </div>
+          )}
         </div>
-      </main>
+      </div>
     </SidebarLayout>
   );
 }

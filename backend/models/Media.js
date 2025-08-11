@@ -3,21 +3,21 @@ import pool from '../config/db.js';
 
 class Media {
   /**
-   * Create a new media record
-   * @param {{ postId?: number|null, userId: number, url: string, type?: string|null }} args
+   * Create a new media record.
+   * @param {{ postId: number, url: string, type?: string|null }} args
    * @returns {Promise<number>} newly inserted media ID
    */
-  static async create({ postId = null, userId, url, type = null }) {
+  static async create({ postId, url, type = null }) {
     const [result] = await pool.execute(
-      `INSERT INTO media (post_id, user_id, url, type)
-       VALUES (?, ?, ?, ?)`,
-      [postId, userId, url, type]
+      `INSERT INTO media (post_id, file_url, file_type)
+       VALUES (?, ?, ?)`,
+      [postId, url, type]
     );
     return result.insertId;
   }
 
   /**
-   * Find a media record by its ID
+   * Find a media record by its ID.
    * @param {number} id
    * @returns {Promise<Object|null>}
    */
@@ -25,11 +25,10 @@ class Media {
     const [rows] = await pool.execute(
       `SELECT
          id,
-         post_id    AS postId,
-         user_id    AS userId,
-         url,
-         type,
-         created_at AS createdAt
+         post_id     AS postId,
+         file_url    AS url,
+         file_type   AS type,
+         uploaded_at AS uploadedAt
        FROM media
        WHERE id = ?`,
       [id]
@@ -38,7 +37,7 @@ class Media {
   }
 
   /**
-   * List all media items for a given post
+   * List all media items for a given post.
    * @param {number} postId
    * @returns {Promise<Array<Object>>}
    */
@@ -46,19 +45,20 @@ class Media {
     const [rows] = await pool.execute(
       `SELECT
          id,
-         url,
-         type,
-         created_at AS createdAt
+         post_id     AS postId,
+         file_url    AS url,
+         file_type   AS type,
+         uploaded_at AS uploadedAt
        FROM media
        WHERE post_id = ?
-       ORDER BY created_at ASC`,
+       ORDER BY uploaded_at ASC`,
       [postId]
     );
     return rows;
   }
 
   /**
-   * Delete a media record by its ID
+   * Delete a media record by its ID.
    * @param {number} id
    * @returns {Promise<boolean>} true if deleted
    */

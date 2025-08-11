@@ -129,6 +129,14 @@ class Post {
     );
     return result.affectedRows > 0;
   }
+
+  static async setImageUrl(id, imageUrl) {
+    const [result] = await pool.execute(
+      `UPDATE posts SET image_url = ? WHERE id = ?`,
+      [imageUrl, id]
+    );
+    return result.affectedRows > 0;
+  }
 }
 
 export default Post;
