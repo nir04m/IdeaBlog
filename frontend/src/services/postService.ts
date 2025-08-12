@@ -4,6 +4,7 @@ export interface Post {
   id: number;
   userId: number;
   categoryId: number;
+  categoryName?: string; 
   tagId: number | null;
   title: string;
   content: string;

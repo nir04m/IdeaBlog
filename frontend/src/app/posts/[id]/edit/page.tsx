@@ -9,7 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import postService, { UpdatePostInput } from "@/services/postService";
 import categoriesService, { Category } from "@/services/categoriesService";
-import mediaService, { getUploadedUrl } from "@/services/mediaService";
+import mediaService from "@/services/mediaService";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,25 +102,29 @@ export default function EditPostPage() {
   });
 
   // When post loads, hydrate form + preview
+  const [originalImageUrl, setOriginalImageUrl] = useState<string | null>(null);
+
   useEffect(() => {
     if (!postQ.data) return;
     const p = postQ.data;
+
     reset({
       title: p.title ?? "",
       content: p.content ?? "",
       categoryId: p.categoryId ?? 0,
       imageUrl: p.imageUrl ?? "",
     });
-    setCoverPreview(p.imageUrl ?? null);
 
-    // pre-select category if we have it
+    setCoverPreview(p.imageUrl ?? null);
+    setOriginalImageUrl(p.imageUrl ?? null);   // <-- keep what’s stored in DB right now
+
     if (catsQ.data) {
       const match = catsQ.data.find((c) => c.id === p.categoryId) || null;
       setSelectedCategory(match);
     }
   }, [postQ.data, catsQ.data, reset]);
 
-  // FileUpload “preview-only” uploader: stash File and show local preview
+  // preview-only uploader stays the same
   const previewOnlyUploader = async (file: File) => {
     setPendingFile(file);
     const local = URL.createObjectURL(file);
@@ -131,37 +135,28 @@ export default function EditPostPage() {
   const onSubmit: SubmitHandler<FormInput> = async (values) => {
     setSubmitting(true);
     setErrMsg(null);
-
     try {
-      let newImageUrl: string | undefined = values.imageUrl || undefined;
+      let nextImageUrl: string | null = originalImageUrl ?? null;
 
       if (pendingFile) {
-        // 1) remove last media (if any)
-        try {
-          const existing = await mediaService.listForPost(postId);
-          if (existing.length > 0) {
-            const last = existing[existing.length - 1]; // assume sorted old→new
-            await mediaService.deleteMedia(last.id);
-          }
-        } catch (e) {
-          // non-fatal; continue
-          console.warn("Deleting previous media failed (continuing):", e);
-        }
+        // 1) delete old media for this post (match exact URL first, else latest)
+        await mediaService.deleteCurrentCover(postId, originalImageUrl);
 
-        // 2) upload new file
+        // 2) upload the new file once
         const uploaded = await mediaService.uploadForPost(postId, pendingFile);
-        newImageUrl = getUploadedUrl(uploaded);
+        nextImageUrl = uploaded.url;
       }
 
-      // 3) update post
+      // 3) update the post
       const payload: UpdatePostInput = {
         title: values.title,
         content: values.content,
         categoryId: values.categoryId,
-        imageUrl: newImageUrl ?? null,
+        imageUrl: nextImageUrl ?? "", // or null if your API prefers
       };
 
       await postService.update(postId, payload);
+      // go to the post
       router.push(`/posts/${postId}`);
     } catch (err: any) {
       console.error(err);

@@ -5,6 +5,7 @@ import { extractR2KeyFromUrl } from '../services/r2Key.js';
 import { uploadToR2, deleteFromR2 } from '../services/mediaService.js';
 import crypto from 'crypto';
 
+
 export const uploadMedia = async (req, res, next) => {
   try {
     const postId = Number(req.params.postId);
@@ -30,7 +31,7 @@ export const uploadMedia = async (req, res, next) => {
     const mediaId = await Media.create({ postId, userId, url, type: req.file.mimetype });
     const media   = await Media.findById(mediaId);
 
-    // 🔽 also update the post’s image_url so the cover shows up
+    // also update the post’s image_url so the cover shows up
     await Post.setImageUrl(postId, url);
 
     res.status(201).json({ message: 'Media uploaded', media });

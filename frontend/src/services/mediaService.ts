@@ -5,12 +5,6 @@ const api = axios.create({
   withCredentials: true,
 });
 
-export interface UploadedMedia {
-  id: number;
-  url: string;
-  type: string;
-}
-
 export type MediaItem = {
   id: number;
   url: string;
@@ -18,37 +12,59 @@ export type MediaItem = {
   createdAt: string;
 };
 
-// Allow both shapes (your backend might return { media: {...} } or { url: "..." })
-export type UploadedMediaT =
-  | { media: MediaItem }
-  | { url: string };
-
-export function getUploadedUrl(resp: UploadedMediaT): string {
-  if ("media" in resp) return resp.media.url;
-  if ("url" in resp) return resp.url;
-  throw new Error("Upload response did not include a URL");
-}
+export type UploadResponse = {
+  media: MediaItem; // your backend returns { message, media: {...} }
+};
 
 const mediaService = {
-  uploadForPost: async (postId: number, file: File): Promise<UploadedMedia> => {
+  /** POST /posts/:postId/media  -> { media } */
+  async uploadForPost(postId: number, file: File): Promise<MediaItem> {
     const fd = new FormData();
     fd.append("file", file);
-    const res = await api.post(`/posts/${postId}/media`, fd, {
+    const res = await api.post<UploadResponse>(`/posts/${postId}/media`, fd, {
       headers: { "Content-Type": "multipart/form-data" },
     });
-    // backend returns { message, media: { id, url, type, ... } }
-    return res.data.media as UploadedMedia;
+    return res.data.media;
   },
 
+  /** GET /posts/:postId/media -> { media: MediaItem[] } */
   async listForPost(postId: number): Promise<MediaItem[]> {
     const res = await api.get<{ media: MediaItem[] }>(`/posts/${postId}/media`);
     return res.data.media ?? [];
   },
 
+  /** DELETE /media/:id */
   async deleteMedia(mediaId: number): Promise<void> {
     await api.delete(`/media/${mediaId}`);
   },
 
+  /**
+   * Best-effort: find the media for a post that corresponds to the current image.
+   * Prefer the exact URL match; otherwise fall back to the newest media item.
+   * Returns true if it attempted a delete (and 2xx), false if nothing to delete.
+   */
+  async deleteCurrentCover(postId: number, currentImageUrl?: string | null): Promise<boolean> {
+    const list = await this.listForPost(postId);
+    if (!list || list.length === 0) return false;
+
+    let target: MediaItem | undefined;
+    if (currentImageUrl) {
+      target = list.find(m => m.url === currentImageUrl);
+    }
+    if (!target) {
+      // assume server returns media sorted old→new (if not, sort by createdAt)
+      target = list[list.length - 1];
+    }
+    if (!target) return false;
+
+    try {
+      await this.deleteMedia(target.id);
+      return true;
+    } catch {
+      // non-fatal
+      return false;
+    }
+  },
 };
 
 export default mediaService;

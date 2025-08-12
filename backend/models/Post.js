@@ -35,9 +35,11 @@ class Post {
          p.content,
          p.image_url          AS imageUrl,
          p.created_at         AS createdAt,
-         p.updated_at         AS updatedAt
+         p.updated_at         AS updatedAt,
+         c.name               AS categoryName
        FROM posts p
        JOIN users u ON p.user_id = u.id
+       JOIN categories c ON c.id = p.category_id
        WHERE p.id = ?`,
       [id]
     );
@@ -64,6 +66,7 @@ class Post {
          p.updated_at         AS updatedAt
        FROM posts p
        JOIN users u ON p.user_id = u.id
+       JOIN categories c ON c.id = p.category_id
        ORDER BY p.created_at DESC`
     );
     return rows;
