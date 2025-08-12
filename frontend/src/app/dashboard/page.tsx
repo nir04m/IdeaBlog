@@ -11,6 +11,7 @@ import { ContentCard } from "@/components/cards-demo-2";
 
 import postService, { Post } from "@/services/postService";
 import userService, { UserProfile } from "@/services/userService";
+import RequireAuth from "@/components/auth/RequireAuth";
 
 function PostsGrid({
   posts,
@@ -90,6 +91,7 @@ export default function DashboardPage() {
     });
 
   return (
+    <RequireAuth>
     <SidebarLayout
       user={user ?? null}
       onLogout={() => logoutMutation.mutate()}
@@ -128,5 +130,6 @@ export default function DashboardPage() {
         </div>
       </main>
     </SidebarLayout>
+    </RequireAuth>
   );
 }

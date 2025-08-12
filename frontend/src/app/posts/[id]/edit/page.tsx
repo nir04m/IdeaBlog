@@ -24,6 +24,7 @@ import { ChevronsUpDown } from "lucide-react";
 import { FileUpload } from "@/components/ui/file-upload";
 import SidebarLayout from "@/app/components/layout/SidebarLayout";
 import userService, { UserProfile } from "@/services/userService";
+import RequireAuth from "@/components/auth/RequireAuth";
 
 /* ---------- Validation ---------- */
 const schema = z.object({
@@ -174,6 +175,7 @@ export default function EditPostPage() {
   const loadError = postQ.isError;
 
   return (
+    <RequireAuth>
     <SidebarLayout
           user={user ?? null}
           onLogout={() => logoutMutation.mutate()}
@@ -292,5 +294,6 @@ export default function EditPostPage() {
         </div>
       </div>
     </SidebarLayout>
+    </RequireAuth>
   );
 }

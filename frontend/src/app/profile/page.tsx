@@ -13,6 +13,7 @@ import SidebarLayout from "@/app/components/layout/SidebarLayout";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import RequireAuth from "@/components/auth/RequireAuth";
 
 /* schema */
 const onboardingSchema = z.object({
@@ -121,6 +122,7 @@ export default function ProfilePage() {
   const saving = saveMutation.status === "pending";
 
   return (
+    <RequireAuth>
     <SidebarLayout
       user={userQ.data ?? null}
       onLogout={() => logoutMutation.mutate()}
@@ -184,5 +186,6 @@ export default function ProfilePage() {
         </div>
       </div>
     </SidebarLayout>
+    </RequireAuth>
   );
 }

@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronsUpDown } from "lucide-react";
 import { FileUpload } from "@/components/ui/file-upload";
+import RequireAuth from "@/components/auth/RequireAuth";
 
 /* ---------- Validation ---------- */
 const schema = z.object({
@@ -138,6 +139,7 @@ export default function NewPostPage() {
   const catButtonLabel = selectedCategory?.name ?? "Select category";
 
   return (
+    <RequireAuth>
     <SidebarLayout
       user={user ?? null}
       onLogout={() => logoutMutation.mutate()}
@@ -243,5 +245,6 @@ export default function NewPostPage() {
         </div>
       </main>
     </SidebarLayout>
+    </RequireAuth>
   );
 }
