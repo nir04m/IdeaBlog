@@ -101,54 +101,50 @@ export const updatePost = async (req, res, next) => {
   try {
     const postId = Number(req.params.id);
     const existing = await Post.findById(postId);
-    
-    if (!existing) {
-      return res.status(404).json({ error: 'Post not found' });
-    }
+    if (!existing) return res.status(404).json({ error: 'Post not found' });
     if (req.user.id !== existing.userId) {
       return res.status(403).json({ error: 'Forbidden to update this post' });
     }
 
-    const { title, content, imageUrl, previousImageUrl, categoryId, tagIds = [] } = req.body;
+    const { title, content, imageUrl, categoryId, tagIds = [] } = req.body;
 
-    const oldImageUrl = existing.imageUrl || null;
+    // ✅ capture BEFORE update
+    const oldUrl = existing.imageUrl || null;
 
-    const changed = await Post.update(postId, { title, content, imageUrl, categoryId, tagIds });
-    const oldUrl = previousImageUrl ?? (await Post.findById(postId))?.imageUrl ?? null;
-    console.log('Old Image URL:', oldUrl);
-    console.log('New Image URL:', imageUrl);
+    console.log('DB Old Image URL:', oldUrl);
+    console.log('Incoming New Image URL:', imageUrl);
 
+    // do the update
+    const changed = await Post.update(postId, {
+      title, content, imageUrl, categoryId, tagIds
+    });
+    if (!changed) return res.status(400).json({ error: 'No changes or update failed' });
+
+    // delete only if actually changed
     if (oldUrl && imageUrl && oldUrl !== imageUrl) {
       try {
         const BUCKET = process.env.CF_R2_BUCKET;
-        const u = new URL(oldImageUrl);
+        const u = new URL(oldUrl);
         if (isR2Host(u.host)) {
-          const key = extractR2Key(oldImageUrl, BUCKET);
-          // only touch things in your media/ prefix
+          const key = extractR2Key(oldUrl, BUCKET); // -> "media/<uuid>.<ext>"
           if (key.startsWith('media/')) {
             await deleteFromR2({ key });
           }
         }
-        // 
-        await Media.deleteByPostAndUrl(postId, oldImageUrl).catch(() => {});
-      } catch {
-        // ignore deletion errors
+        if (typeof Media.deleteByPostAndUrl === 'function') {
+          await Media.deleteByPostAndUrl(postId, oldUrl).catch(() => {});
+        }
+      } catch (e) {
+        console.warn('Best-effort old cover cleanup failed:', e?.message || e);
       }
     }
 
-    if (!changed) {
-      return res.status(400).json({ error: 'No changes or update failed' });
-    }
-
-    // sync join-tables
+    // sync joins
     await PostCategory.clearByPost(postId);
     if (categoryId) await PostCategory.add({ postId, categoryId });
-
     await PostTag.clearByPost(postId);
     if (Array.isArray(tagIds)) {
-      await Promise.all(tagIds.map(tagId =>
-        PostTag.add({ postId, tagId })
-      ));
+      await Promise.all(tagIds.map(tagId => PostTag.add({ postId, tagId })));
     }
 
     const post = await Post.findById(postId);
@@ -157,6 +153,7 @@ export const updatePost = async (req, res, next) => {
     next(err);
   }
 };
+
 
 /**
  * DELETE /api/posts/:id
