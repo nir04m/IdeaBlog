@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import RequireAuth from "@/components/auth/RequireAuth";
+import { Navbar } from "@/app/components/layout/Navbar";
 
 /* schema */
 const onboardingSchema = z.object({
@@ -122,70 +123,73 @@ export default function ProfilePage() {
   const saving = saveMutation.status === "pending";
 
   return (
-    <RequireAuth>
-    <SidebarLayout
-      user={userQ.data ?? null}
-      onLogout={() => logoutMutation.mutate()}
-      initialOpen={false}
-    >
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
-        <div className="w-full max-w-lg bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-6">
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 text-center">
-            Edit Your Profile
-          </h1>
+    <>
+      <Navbar />
+      <RequireAuth>
+        <SidebarLayout
+          user={userQ.data ?? null}
+          onLogout={() => logoutMutation.mutate()}
+          initialOpen={false}
+        >
+          <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
+            <div className="w-full max-w-lg bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-6">
+              <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 text-center">
+                Edit Your Profile
+              </h1>
 
-          {/* Avatar */}
-          <div className="flex flex-col items-center">
-            <div className="h-24 w-24 rounded-full overflow-hidden bg-gray-200">
-              {preview ? (
-                <img src={preview} alt="Avatar preview" className="h-full w-full object-cover" />
-              ) : (
-                <div className="h-full w-full flex items-center justify-center text-gray-500">
-                  No Image
+              {/* Avatar */}
+              <div className="flex flex-col items-center">
+                <div className="h-24 w-24 rounded-full overflow-hidden bg-gray-200">
+                  {preview ? (
+                    <img src={preview} alt="Avatar preview" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center text-gray-500">
+                      No Image
+                    </div>
+                  )}
                 </div>
-              )}
+                <label className="mt-2 inline-block px-4 py-2 bg-blue-600 text-white rounded cursor-pointer hover:bg-blue-700">
+                  Upload new avatar
+                  <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+                </label>
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                <div>
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    id="username"
+                    value={userQ.data.username}
+                    readOnly
+                    className="bg-gray-100 dark:bg-gray-700"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="bio">Bio</Label>
+                  <textarea
+                    id="bio"
+                    rows={4}
+                    {...register("bio")}
+                    className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {errors.bio && <p className="text-red-500 text-sm">{errors.bio.message}</p>}
+                </div>
+
+                <input type="hidden" {...register("profilePicture")} />
+                {errors.profilePicture && (
+                  <p className="text-red-500 text-sm">{errors.profilePicture.message}</p>
+                )}
+
+                <Button type="submit" className="w-full" disabled={saving}>
+                  {saving ? "Updating…" : "Update Profile"}
+                </Button>
+              </form>
             </div>
-            <label className="mt-2 inline-block px-4 py-2 bg-blue-600 text-white rounded cursor-pointer hover:bg-blue-700">
-              Upload new avatar
-              <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-            </label>
           </div>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div>
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                value={userQ.data.username}
-                readOnly
-                className="bg-gray-100 dark:bg-gray-700"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="bio">Bio</Label>
-              <textarea
-                id="bio"
-                rows={4}
-                {...register("bio")}
-                className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              {errors.bio && <p className="text-red-500 text-sm">{errors.bio.message}</p>}
-            </div>
-
-            <input type="hidden" {...register("profilePicture")} />
-            {errors.profilePicture && (
-              <p className="text-red-500 text-sm">{errors.profilePicture.message}</p>
-            )}
-
-            <Button type="submit" className="w-full" disabled={saving}>
-              {saving ? "Updating…" : "Update Profile"}
-            </Button>
-          </form>
-        </div>
-      </div>
-    </SidebarLayout>
-    </RequireAuth>
+        </SidebarLayout>
+      </RequireAuth>
+    </>
   );
 }

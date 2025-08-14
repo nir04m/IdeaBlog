@@ -9,6 +9,7 @@ import postService from "@/services/postService";
 import userService, { UserProfile } from "@/services/userService";
 import SidebarLayout from "@/app/components/layout/SidebarLayout";
 import { calsans } from "@/fonts/calsans";
+import { Navbar } from "@/app/components/layout/Navbar";
 
 /* Helpers */
 function formatDate(iso?: string) {
@@ -96,57 +97,60 @@ export default function ReadPostPage() {
   const badge = postQ.data.categoryName ?? "—"; // swap with category name if you fetch it
 
   return (
-    <SidebarLayout
-      user={userQ.data ?? null}
-      onLogout={() => logoutMutation.mutate()}
-      initialOpen={false}
-    >
-      <div className="px-6">
-        <article className="relative mx-auto max-w-3xl antialiased pt-8">
-          {/* Badge / meta */}
-          <div className="mb-4 flex items-center gap-3">
-            <span className="bg-black text-white rounded-full text-xs px-3 py-1">
-              {badge}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {formatDate(post.createdAt)}
-            </span>
-          </div>
-
-          {/* Title */}
-          <h1 className={twMerge(calsans.className, "text-3xl md:text-4xl font-semibold mb-5")}>
-            {post.title}
-          </h1>
-
-          {/* Cover image */}
-          {post.imageUrl && (
-            <img
-              src={post.imageUrl}
-              alt={post.title}
-              width={1600}
-              height={900}
-              className="rounded-lg mb-8 object-cover w-full"
-            />
-          )}
-
-          {/* Body */}
-          <div className="prose prose-neutral dark:prose-invert max-w-none text-[15px] leading-7">
-            {contentToNodes(post.content || "")}
-          </div>
-
-          {/* Author footer (optional) */}
-          <div className="mt-10 flex items-center gap-3">
-            <img
-              src={post.authorPicture || "/user.png"}
-              className="h-8 w-8 rounded-full object-cover"
-              alt={post.authorName || "Author"}
-            />
-            <div className="text-sm text-muted-foreground">
-              By <span className="text-foreground">{post.authorName || "Anonymous"}</span>
+    <>
+      <Navbar />
+      <SidebarLayout
+        user={userQ.data ?? null}
+        onLogout={() => logoutMutation.mutate()}
+        initialOpen={false}
+      >
+        <div className="px-6">
+          <article className="relative mx-auto max-w-3xl antialiased pt-8">
+            {/* Badge / meta */}
+            <div className="mb-4 flex items-center gap-3">
+              <span className="bg-black text-white rounded-full text-xs px-3 py-1">
+                {badge}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {formatDate(post.createdAt)}
+              </span>
             </div>
-          </div>
-        </article>
-      </div>
-    </SidebarLayout>
+
+            {/* Title */}
+            <h1 className={twMerge(calsans.className, "text-3xl md:text-4xl font-semibold mb-5")}>
+              {post.title}
+            </h1>
+
+            {/* Cover image */}
+            {post.imageUrl && (
+              <img
+                src={post.imageUrl}
+                alt={post.title}
+                width={1600}
+                height={900}
+                className="rounded-lg mb-8 object-cover w-full"
+              />
+            )}
+
+            {/* Body */}
+            <div className="prose prose-neutral dark:prose-invert max-w-none text-[15px] leading-7">
+              {contentToNodes(post.content || "")}
+            </div>
+
+            {/* Author footer (optional) */}
+            <div className="mt-10 flex items-center gap-3">
+              <img
+                src={post.authorPicture || "/user.png"}
+                className="h-8 w-8 rounded-full object-cover"
+                alt={post.authorName || "Author"}
+              />
+              <div className="text-sm text-muted-foreground">
+                By <span className="text-foreground">{post.authorName || "Anonymous"}</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </SidebarLayout>
+    </>
   );
 }

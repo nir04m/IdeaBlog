@@ -102,54 +102,87 @@ export const updatePost = async (req, res, next) => {
     const postId = Number(req.params.id);
     const existing = await Post.findById(postId);
     if (!existing) return res.status(404).json({ error: 'Post not found' });
-    if (req.user.id !== existing.userId) {
-      return res.status(403).json({ error: 'Forbidden to update this post' });
-    }
+    if (req.user.id !== existing.userId) return res.status(403).json({ error: 'Forbidden' });
 
-    const { title, content, imageUrl, categoryId, tagIds = [] } = req.body;
+    const { title, content, imageUrl, previousImageUrl, categoryId, tagIds = [] } = req.body;
 
-    // ✅ capture BEFORE update
-    const oldUrl = existing.imageUrl || null;
+    // The current image URL from the database (source of truth)
+    const currentImageInDb = existing.imageUrl || null;
+    // The new image URL being set
+    const newImageUrl = imageUrl || null;
 
-    console.log('DB Old Image URL:', oldUrl);
-    console.log('Incoming New Image URL:', imageUrl);
+    // console.log('=== IMAGE UPDATE DEBUG ===');
+    // console.log('Current image in DB:', currentImageInDb);
+    // console.log('Previous image from client:', previousImageUrl);
+    // console.log('New image URL:', newImageUrl);
 
-    // do the update
-    const changed = await Post.update(postId, {
-      title, content, imageUrl, categoryId, tagIds
-    });
+    // Update post first
+    const changed = await Post.update(postId, { title, content, imageUrl: newImageUrl, categoryId, tagIds });
     if (!changed) return res.status(400).json({ error: 'No changes or update failed' });
 
-    // delete only if actually changed
-    if (oldUrl && imageUrl && oldUrl !== imageUrl) {
+    // Image deletion logic
+    // Delete the old image if:
+    // 1. There was an image in the DB before
+    // 2. The new image URL is different from the old one (or null to remove image)
+    // 3. The old image is hosted on R2
+    if (currentImageInDb && currentImageInDb !== newImageUrl) {
       try {
         const BUCKET = process.env.CF_R2_BUCKET;
-        const u = new URL(oldUrl);
-        if (isR2Host(u.host)) {
-          const key = extractR2Key(oldUrl, BUCKET); // -> "media/<uuid>.<ext>"
-          if (key.startsWith('media/')) {
-            await deleteFromR2({ key });
+        const oldUrl = new URL(currentImageInDb);
+        
+        // Check if it's an R2 hosted image
+        if (oldUrl.host.endsWith('.r2.dev') || oldUrl.host.endsWith('.r2.cloudflarestorage.com')) {
+          // Extract the key from the URL
+          let key = oldUrl.pathname.replace(/^\/+/, ''); // Remove leading slashes
+          
+          // Handle S3 endpoint format: /<bucket>/media/uuid.jpg
+          if (BUCKET && key.startsWith(`${BUCKET}/`)) {
+            key = key.slice(BUCKET.length + 1);
           }
+          
+          // Only delete if it looks like our media path
+          if (key.startsWith('media/')) {
+            // console.log('Deleting old image from R2:', key);
+            await deleteFromR2({ key });
+            // console.log('Successfully deleted old image from R2');
+            
+            // Also remove from media table
+            if (typeof Media.deleteByPostAndUrl === 'function') {
+              await Media.deleteByPostAndUrl(postId, currentImageInDb);
+              // console.log('Removed old image record from media table');
+            }
+          } else {
+            // console.log('Skipping deletion - key does not start with media/:', key);
+          }
+        } else {
+          // console.log('Skipping deletion - not an R2 hosted image:', currentImageInDb);
         }
-        if (typeof Media.deleteByPostAndUrl === 'function') {
-          await Media.deleteByPostAndUrl(postId, oldUrl).catch(() => {});
-        }
-      } catch (e) {
-        console.warn('Best-effort old cover cleanup failed:', e?.message || e);
+      } catch (deleteError) {
+        // Don't fail the whole request if image deletion fails
+        console.warn('Failed to delete old image:', deleteError?.message || deleteError);
       }
+    } else {
+      // console.log('No image deletion needed:', {
+      //   hadOldImage: !!currentImageInDb,
+      //   imageChanged: currentImageInDb !== newImageUrl,
+      //   reason: !currentImageInDb ? 'No old image' : 'Image unchanged'
+      // });
     }
 
-    // sync joins
+    // Update category and tag relationships
     await PostCategory.clearByPost(postId);
     if (categoryId) await PostCategory.add({ postId, categoryId });
+    
     await PostTag.clearByPost(postId);
     if (Array.isArray(tagIds)) {
       await Promise.all(tagIds.map(tagId => PostTag.add({ postId, tagId })));
     }
 
-    const post = await Post.findById(postId);
-    res.json({ message: 'Post updated', post });
+    // Return the updated post
+    const updatedPost = await Post.findById(postId);
+    res.json({ message: 'Post updated', post: updatedPost });
   } catch (err) {
+    console.error('Error updating post:', err);
     next(err);
   }
 };

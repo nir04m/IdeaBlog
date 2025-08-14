@@ -25,6 +25,7 @@ import { FileUpload } from "@/components/ui/file-upload";
 import SidebarLayout from "@/app/components/layout/SidebarLayout";
 import userService, { UserProfile } from "@/services/userService";
 import RequireAuth from "@/components/auth/RequireAuth";
+import { Navbar } from "@/app/components/layout/Navbar";
 
 /* ---------- Validation ---------- */
 const schema = z.object({
@@ -125,57 +126,76 @@ export default function EditPostPage() {
     }
   }, [postQ.data, catsQ.data, reset]);
 
-  // preview-only uploader stays the same
-  // const previewOnlyUploader = async (file: File) => {
-  //   setPendingFile(file);
-  //   const local = URL.createObjectURL(file);
-  //   setCoverPreview(local);
-  //   return local;
-  // };
+  // 1. the previewOnlyUploader function:
   const previewOnlyUploader = async (file: File) => {
+    console.log('New file selected:', file.name);
+    
+    // Store the file for later upload
     setPendingFile(file);
-    const local = URL.createObjectURL(file);
-    setCoverPreview(local);
-    // make sure we don't carry old URL in the form
-    setValue("imageUrl", "", { shouldDirty: true, shouldValidate: false });
-    return local;
+    
+    // Create local preview URL
+    const localPreviewUrl = URL.createObjectURL(file);
+    setCoverPreview(localPreviewUrl);
+    
+    return localPreviewUrl;
   };
 
+  // 2. Update the onSubmit function:
   const onSubmit: SubmitHandler<FormInput> = async (values) => {
     setSubmitting(true);
     setErrMsg(null);
     try {
-      let newImageUrl: string | undefined = values.imageUrl || undefined;
+      let finalImageUrl: string | null = null;
 
       if (pendingFile) {
-        // 1) delete old media for this post (match exact URL first, else latest)
-        // await mediaService.deleteCurrentCover(postId, originalImageUrl);
-
-        // 2) upload the new file once
+        // User selected a new file - upload it and use the new URL
+        console.log('Uploading new file...');
         const uploaded = await mediaService.uploadForPost(postId, pendingFile);
-        newImageUrl = uploaded.url;
+        finalImageUrl = uploaded.url;
+        console.log('New file uploaded:', finalImageUrl);
       } else {
-      // No new file—keep whatever is already stored
-        newImageUrl = values.imageUrl ?? undefined;
+        // No new file selected - use whatever is in the form
+        // This could be the existing image URL or empty string (to remove image)
+        finalImageUrl = values.imageUrl || null;
+        console.log('No new file, using form value:', finalImageUrl);
       }
 
-      // 3) update the post
+      // Create the payload
       const payload: UpdatePostInput = {
         title: values.title,
         content: values.content,
         categoryId: values.categoryId,
-        imageUrl: newImageUrl ?? null,
-        previousImageUrl: originalImageUrl ?? null,
+        imageUrl: finalImageUrl, // This is now the correct new URL
+        previousImageUrl: originalImageUrl, // This is what was originally in DB
       };
 
+      console.log('Payload being sent:', {
+        title: payload.title,
+        imageUrl: payload.imageUrl,
+        previousImageUrl: payload.previousImageUrl,
+        hasNewFile: !!pendingFile,
+        imageChanged: originalImageUrl !== finalImageUrl
+      });
+
       await postService.update(postId, payload);
-      // go to the post
       router.push(`/posts/${postId}`);
     } catch (err: any) {
-      console.error(err);
+      console.error('Submit error:', err);
       setErrMsg(err?.response?.data?.error || "Failed to update post");
       setSubmitting(false);
     }
+  };
+
+  // 3. Add a remove image function:
+  const removeCurrentImage = () => {
+    // Clear the pending file and preview
+    setPendingFile(null);
+    setCoverPreview(null);
+    
+    // Set the form field to empty string to indicate image removal
+    setValue("imageUrl", "", { shouldDirty: true, shouldValidate: false });
+    
+    console.log('Image removed - will delete on save');
   };
 
   const catButtonLabel = useMemo(
@@ -187,125 +207,165 @@ export default function EditPostPage() {
   const loadError = postQ.isError;
 
   return (
-    <RequireAuth>
-    <SidebarLayout
-          user={user ?? null}
-          onLogout={() => logoutMutation.mutate()}
-          initialOpen={false}
-        >
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-10 px-4">
-        <div className="mx-auto w-full max-w-3xl rounded-lg border bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-800">
-          <h1 className="mb-6 text-2xl font-semibold text-gray-900 dark:text-gray-100">
-            Edit post
-          </h1>
+    <>
+      <Navbar />
+      <RequireAuth>
+        <SidebarLayout
+              user={user ?? null}
+              onLogout={() => logoutMutation.mutate()}
+              initialOpen={false}
+            >
+          <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-10 px-4">
+            <div className="mx-auto w-full max-w-3xl rounded-lg border bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-800">
+              <h1 className="mb-6 text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                Edit post
+              </h1>
 
-          {loading && <p>Loading…</p>}
-          {loadError && (
-            <p className="text-red-500">
-              Couldn’t load the post. (Are you logged in / allowed to edit?)
-            </p>
-          )}
-
-          {!loading && !loadError && (
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              {errMsg && (
-                <p className="text-sm text-red-500 bg-red-50 dark:bg-red-950/30 rounded p-2">
-                  {errMsg}
+              {loading && <p>Loading…</p>}
+              {loadError && (
+                <p className="text-red-500">
+                  Couldn’t load the post. (Are you logged in / allowed to edit?)
                 </p>
               )}
 
-              {/* Title */}
-              <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
-                <Input id="title" placeholder="Post title…" {...register("title")} />
-                {errors.title && <p className="text-sm text-blue-500">{errors.title.message}</p>}
-              </div>
+              {!loading && !loadError && (
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                  {errMsg && (
+                    <p className="text-sm text-red-500 bg-red-50 dark:bg-red-950/30 rounded p-2">
+                      {errMsg}
+                    </p>
+                  )}
 
-              {/* Content */}
-              <div className="space-y-2">
-                <Label htmlFor="content">Content</Label>
-                <textarea
-                  id="content"
-                  rows={8}
-                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900"
-                  placeholder="Update your story…"
-                  {...register("content")}
-                />
-                {errors.content && <p className="text-sm text-blue-500">{errors.content.message}</p>}
-              </div>
+                  {/* Title */}
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Title</Label>
+                    <Input id="title" placeholder="Post title…" {...register("title")} />
+                    {errors.title && <p className="text-sm text-blue-500">{errors.title.message}</p>}
+                  </div>
 
-              {/* Category */}
-              <div className="space-y-2">
-                <Label>Category</Label>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                  {/* Content */}
+                  <div className="space-y-2">
+                    <Label htmlFor="content">Content</Label>
+                    <textarea
+                      id="content"
+                      rows={8}
+                      className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900"
+                      placeholder="Update your story…"
+                      {...register("content")}
+                    />
+                    {errors.content && <p className="text-sm text-blue-500">{errors.content.message}</p>}
+                  </div>
+
+                  {/* Category */}
+                  <div className="space-y-2">
+                    <Label>Category</Label>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full justify-between"
+                          disabled={catsQ.isLoading}
+                        >
+                          {catButtonLabel}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="start"
+                        className="w-[--radix-dropdown-menu-trigger-width] max-h-64 overflow-auto"
+                      >
+                        {(catsQ.data ?? []).map((cat) => (
+                          <DropdownMenuItem
+                            key={cat.id}
+                            onClick={() => {
+                              setSelectedCategory(cat);
+                              setValue("categoryId", cat.id, { shouldValidate: true, shouldDirty: true });
+                            }}
+                          >
+                            {cat.name}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <input type="hidden" {...register("categoryId", { valueAsNumber: true })} />
+                    {errors.categoryId && (
+                      <p className="text-sm text-blue-500">{errors.categoryId.message}</p>
+                    )}
+                  </div>
+
+                  {/* Cover image (preview now, upload on save) */}
+                  <div className="space-y-2">
+                    <Label>Cover image</Label>
+                    <FileUpload
+                      uploader={previewOnlyUploader}
+                      onUploadComplete={(url) => setCoverPreview(url ?? null)}
+                    />
+                    
+                    {/* Show current preview (either new file or existing image) */}
+                    {coverPreview && (
+                      <div className="mt-3">
+                        <img
+                          src={coverPreview}
+                          alt="Cover preview"
+                          className="h-40 w-full rounded object-cover border border-gray-200 dark:border-gray-700"
+                        />
+                        <div className="mt-2 flex gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={removeCurrentImage}
+                          >
+                            Remove image
+                          </Button>
+                          {pendingFile && (
+                            <span className="text-xs text-green-600 self-center">
+                              New file selected
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Show message when no preview but there was an original image */}
+                    {!coverPreview && originalImageUrl && (
+                      <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded border">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Current image will be kept (no changes)
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* Show message when image was removed */}
+                    {!coverPreview && !originalImageUrl && (
+                      <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded border">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          No image selected
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="pt-2 flex gap-3">
+                    <Button type="submit" disabled={submitting}>
+                      {submitting ? "Saving…" : "Save changes"}
+                    </Button>
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-full justify-between"
-                      disabled={catsQ.isLoading}
+                      onClick={() => router.push(`/posts/${postId}`)}
                     >
-                      {catButtonLabel}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                      Cancel
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="start"
-                    className="w-[--radix-dropdown-menu-trigger-width] max-h-64 overflow-auto"
-                  >
-                    {(catsQ.data ?? []).map((cat) => (
-                      <DropdownMenuItem
-                        key={cat.id}
-                        onClick={() => {
-                          setSelectedCategory(cat);
-                          setValue("categoryId", cat.id, { shouldValidate: true, shouldDirty: true });
-                        }}
-                      >
-                        {cat.name}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <input type="hidden" {...register("categoryId", { valueAsNumber: true })} />
-                {errors.categoryId && (
-                  <p className="text-sm text-blue-500">{errors.categoryId.message}</p>
-                )}
-              </div>
-
-              {/* Cover image (preview now, upload on save) */}
-              <div className="space-y-2">
-                <Label>Cover image</Label>
-                <FileUpload
-                  uploader={previewOnlyUploader}
-                  onUploadComplete={(url) => setCoverPreview(url ?? null)}
-                />
-                {coverPreview && (
-                  <img
-                    src={coverPreview}
-                    alt="Cover preview"
-                    className="mt-3 h-40 w-full rounded object-cover border border-gray-200 dark:border-gray-700"
-                  />
-                )}
-              </div>
-
-              {/* Actions */}
-              <div className="pt-2 flex gap-3">
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? "Saving…" : "Save changes"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => router.push(`/posts/${postId}`)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          )}
-        </div>
-      </div>
-    </SidebarLayout>
-    </RequireAuth>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        </SidebarLayout>
+      </RequireAuth>
+    </>
   );
 }

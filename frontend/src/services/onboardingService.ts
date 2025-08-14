@@ -8,7 +8,7 @@ const api = axios.create({
 
 export default {
   // Onboarding calls the same /user update but sets markOnboarded=true
-  completeOnboarding: (payload: { username: string;bio: string; profilePicture?: string }) =>
+  completeOnboarding: (payload: { username?: string;bio: string; profilePicture?: string }) =>
     api.put('/user', { ...payload, markOnboarded: true }),
 
   uploadAvatar: (file: File): Promise<{ url: string }> => {

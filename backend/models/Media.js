@@ -72,7 +72,7 @@ class Media {
 
   static async deleteByPostAndUrl(postId, url) {
     const [r] = await pool.execute(
-      `DELETE FROM media WHERE post_id = ? AND url = ?`,
+      `DELETE FROM media WHERE post_id = ? AND file_url = ?`,
       [postId, url]
     );
     return r.affectedRows > 0;

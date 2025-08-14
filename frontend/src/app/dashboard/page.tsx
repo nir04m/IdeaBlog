@@ -12,6 +12,7 @@ import { ContentCard } from "@/components/cards-demo-2";
 import postService, { Post } from "@/services/postService";
 import userService, { UserProfile } from "@/services/userService";
 import RequireAuth from "@/components/auth/RequireAuth";
+import { Navbar } from "@/app/components/layout/Navbar";
 
 function PostsGrid({
   posts,
@@ -21,6 +22,7 @@ function PostsGrid({
   mode: "view" | "edit";
 }) {
   return (
+    
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       {posts.map((post) => {
         const href = mode === "view" ? `/posts/${post.id}` : `/posts/${post.id}/edit`;
@@ -91,45 +93,48 @@ export default function DashboardPage() {
     });
 
   return (
-    <RequireAuth>
-    <SidebarLayout
-      user={user ?? null}
-      onLogout={() => logoutMutation.mutate()}
-      initialOpen={true}
-    >
-      <main className="w-full">
-        <div className="px-4 py-8 md:px-8">
-          <h1 className="text-2xl font-semibold mb-4 text-gray-900 dark:text-gray-100">
-            My Dashboard
-          </h1>
+    <>
+      <Navbar />
+      <RequireAuth>
+        <SidebarLayout
+          user={user ?? null}
+          onLogout={() => logoutMutation.mutate()}
+          initialOpen={true}
+        >
+          <main className="w-full">
+            <div className="px-4 py-8 md:px-8">
+              <h1 className="text-2xl font-semibold mb-4 text-gray-900 dark:text-gray-100">
+                My Dashboard
+              </h1>
 
-          {isLoading || userLoading ? (
-            <p className="text-gray-600 dark:text-gray-300">Loading…</p>
-          ) : isError ? (
-            <p className="text-red-500">Failed to load your posts.</p>
-          ) : myPosts.length === 0 ? (
-            <p className="text-gray-600 dark:text-gray-300">
-              You haven’t published any posts yet.
-            </p>
-          ) : (
-            <Tabs defaultValue="view" className="w-full">
-              <TabsList className="mb-6">
-                <TabsTrigger value="view">View My Posts</TabsTrigger>
-                <TabsTrigger value="edit">Edit My Posts</TabsTrigger>
-              </TabsList>
+              {isLoading || userLoading ? (
+                <p className="text-gray-600 dark:text-gray-300">Loading…</p>
+              ) : isError ? (
+                <p className="text-red-500">Failed to load your posts.</p>
+              ) : myPosts.length === 0 ? (
+                <p className="text-gray-600 dark:text-gray-300">
+                  You haven’t published any posts yet.
+                </p>
+              ) : (
+                <Tabs defaultValue="view" className="w-full">
+                  <TabsList className="mb-6">
+                    <TabsTrigger value="view">View My Posts</TabsTrigger>
+                    <TabsTrigger value="edit">Edit My Posts</TabsTrigger>
+                  </TabsList>
 
-              <TabsContent value="view">
-                <PostsGrid posts={myPosts} mode="view" />
-              </TabsContent>
+                  <TabsContent value="view">
+                    <PostsGrid posts={myPosts} mode="view" />
+                  </TabsContent>
 
-              <TabsContent value="edit">
-                <PostsGrid posts={myPosts} mode="edit" />
-              </TabsContent>
-            </Tabs>
-          )}
-        </div>
-      </main>
-    </SidebarLayout>
-    </RequireAuth>
+                  <TabsContent value="edit">
+                    <PostsGrid posts={myPosts} mode="edit" />
+                  </TabsContent>
+                </Tabs>
+              )}
+            </div>
+          </main>
+        </SidebarLayout>
+      </RequireAuth>
+    </>
   );
 }

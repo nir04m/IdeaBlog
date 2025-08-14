@@ -10,6 +10,9 @@ import postService, { Post } from "@/services/postService";
 import userService, { UserProfile } from "@/services/userService";
 import { ContentCard } from "@/components/cards-demo-2";
 import ExpandableCardDemo from "@/components/expandable-card-demo-standard";
+import { Navbar } from "@/app/components/layout/Navbar";
+
+
 
 export default function FeedPage() {
   const qc = useQueryClient();
@@ -57,55 +60,58 @@ export default function FeedPage() {
   }, [posts]);
 
   return (
-    <SidebarLayout
-      user={user ?? null}
-      onLogout={() => logoutMutation.mutate()}
-      initialOpen={false}
-    >
-      {/* MAIN CONTENT */}
-      <div className="flex-1 flex flex-col md:flex-row">
-        {/* Feed Grid */}
-        <section className="flex-1 p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-          {isLoading ? (
-            <p>Loading posts…</p>
-          ) : isError ? (
-            <p className="text-red-500">Failed to load posts.</p>
-          ) : (
-            posts.map((post) => (
-              <Link key={post.id} href={`/posts/${post.id}`} className="group/card block">
-                <ContentCard
-                  title={post.title}
-                  excerpt={
-                    post.content.length > 120
-                      ? post.content.slice(0, 120) + "…"
-                      : post.content
-                  }
-                  imageUrl={post.imageUrl}
-                  authorName={post.authorName}
-                  authorAvatarUrl={post.authorPicture ?? undefined}
-                  date={new Date(post.createdAt).toLocaleDateString()}
-                />
-              </Link>
-            ))
-          )}
-        </section>
+    <>
+      <Navbar />
+      <SidebarLayout
+        user={user ?? null}
+        onLogout={() => logoutMutation.mutate()}
+        initialOpen={false}
+      >
+        {/* MAIN CONTENT */}
+        <div className="flex-1 flex flex-col md:flex-row">
+          {/* Feed Grid */}
+          <section className="flex-1 p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+            {isLoading ? (
+              <p>Loading posts…</p>
+            ) : isError ? (
+              <p className="text-red-500">Failed to load posts.</p>
+            ) : (
+              posts.map((post) => (
+                <Link key={post.id} href={`/posts/${post.id}`} className="group/card block">
+                  <ContentCard
+                    title={post.title}
+                    excerpt={
+                      post.content.length > 120
+                        ? post.content.slice(0, 120) + "…"
+                        : post.content
+                    }
+                    imageUrl={post.imageUrl}
+                    authorName={post.authorName}
+                    authorAvatarUrl={post.authorPicture ?? undefined}
+                    date={new Date(post.createdAt).toLocaleDateString()}
+                  />
+                </Link>
+              ))
+            )}
+          </section>
 
-        {/* Recommended Sidebar */}
-        <aside className="w-full md:w-80 p-6 border-t md:border-t-0 md:border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-          <h2 className="text-2xl font-semibold mb-4 text-gray-800 dark:text-gray-100">
-            Recommended Blogs
-          </h2>
-          {isLoading ? (
-            <p>Loading…</p>
-          ) : isError ? (
-            <p className="text-red-500">Failed to load recommendations.</p>
-          ) : (
-            recommended.map((post) => (
-              <ExpandableCardDemo key={post.id} post={post} />
-            ))
-          )}
-        </aside>
-      </div>
-    </SidebarLayout>
+          {/* Recommended Sidebar */}
+          <aside className="w-full md:w-80 p-6 border-t md:border-t-0 md:border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+            <h2 className="text-2xl font-semibold mb-4 text-gray-800 dark:text-gray-100">
+              Recommended Blogs
+            </h2>
+            {isLoading ? (
+              <p>Loading…</p>
+            ) : isError ? (
+              <p className="text-red-500">Failed to load recommendations.</p>
+            ) : (
+              recommended.map((post) => (
+                <ExpandableCardDemo key={post.id} post={post} />
+              ))
+            )}
+          </aside>
+        </div>
+      </SidebarLayout>
+    </>
   );
 }
