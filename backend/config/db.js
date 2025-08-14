@@ -80,6 +80,26 @@ const pool = mysql.createPool({
       logger.info('tag_id column already exists; skipping ALTER');
     }
 
+    // 2) Conditionally add is_admin column if it doesn't exist
+    const [onboardingCols] = await pool.query(
+      `SELECT 1
+       FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = ?
+         AND TABLE_NAME   = 'users'
+         AND COLUMN_NAME  = 'onboarding'
+       LIMIT 1`,
+      [dbName]
+    );
+    if (onboardingCols.length === 0) {
+      await pool.query(
+        `ALTER TABLE users
+         ADD COLUMN onboarding TINYINT(1) NOT NULL DEFAULT 0`
+      );
+      logger.info('Added onboarding column to users table');
+    } else {
+      logger.info('onboarding column already exists; skipping ALTER');
+    }
+
   } catch (err) {
    logger.error('Failed to initialize database:', err);
     process.exit(1);

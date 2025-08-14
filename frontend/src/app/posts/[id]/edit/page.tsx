@@ -126,10 +126,18 @@ export default function EditPostPage() {
   }, [postQ.data, catsQ.data, reset]);
 
   // preview-only uploader stays the same
+  // const previewOnlyUploader = async (file: File) => {
+  //   setPendingFile(file);
+  //   const local = URL.createObjectURL(file);
+  //   setCoverPreview(local);
+  //   return local;
+  // };
   const previewOnlyUploader = async (file: File) => {
     setPendingFile(file);
     const local = URL.createObjectURL(file);
     setCoverPreview(local);
+    // make sure we don't carry old URL in the form
+    setValue("imageUrl", "", { shouldDirty: true, shouldValidate: false });
     return local;
   };
 
@@ -137,15 +145,18 @@ export default function EditPostPage() {
     setSubmitting(true);
     setErrMsg(null);
     try {
-      let nextImageUrl: string | null = originalImageUrl ?? null;
+      let newImageUrl: string | undefined = values.imageUrl || undefined;
 
       if (pendingFile) {
         // 1) delete old media for this post (match exact URL first, else latest)
-        await mediaService.deleteCurrentCover(postId, originalImageUrl);
+        // await mediaService.deleteCurrentCover(postId, originalImageUrl);
 
         // 2) upload the new file once
         const uploaded = await mediaService.uploadForPost(postId, pendingFile);
-        nextImageUrl = uploaded.url;
+        newImageUrl = uploaded.url;
+      } else {
+      // No new file—keep whatever is already stored
+        newImageUrl = values.imageUrl ?? undefined;
       }
 
       // 3) update the post
@@ -153,7 +164,8 @@ export default function EditPostPage() {
         title: values.title,
         content: values.content,
         categoryId: values.categoryId,
-        imageUrl: nextImageUrl ?? "", // or null if your API prefers
+        imageUrl: newImageUrl ?? null,
+        previousImageUrl: originalImageUrl ?? null,
       };
 
       await postService.update(postId, payload);

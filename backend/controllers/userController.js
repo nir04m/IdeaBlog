@@ -40,7 +40,7 @@ export const getProfile = async (req, res, next) => {
 export const updateProfile = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { username, bio, profilePicture } = req.body;
+    const { username, bio, profilePicture, markOnboarded } = req.body;
 
     const existing = await User.findById(userId);
     if (!existing) return res.status(404).json({ error: 'User not found' });
@@ -52,7 +52,13 @@ export const updateProfile = async (req, res, next) => {
       bio: bio ?? null,
       profilePicture: profilePicture ?? null,
     });
+    
     if (!ok) return res.status(400).json({ error: 'Profile update failed' });
+
+    const shouldMark = (markOnboarded === true || markOnboarded === 'true');
+    if (shouldMark) {
+      await User.setOnboarding(userId, true);
+    }
 
     const updated = await User.findById(userId);
     res.json({ message: 'Profile updated', user: updated });

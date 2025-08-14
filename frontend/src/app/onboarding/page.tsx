@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,9 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
+
 /* ------------------------------------------------------------------ */
 /* Schema: accept "", undefined, or a valid URL; turn "" into undefined */
 const onboardingSchema = z.object({
+  username: z.string().min(3, "Username is required").max(50, "Max 50 characters"),
   bio: z.string().max(160, "Max 160 characters"),
   profilePicture: z
     .union([z.string().url(), z.literal(""), z.undefined()])
@@ -37,6 +40,7 @@ function toAbsoluteIfRelative(u?: string): string | undefined {
 
 export default function OnboardingPage() {
   const qc = useQueryClient();
+  const router = useRouter();
 
   /* 1) Load current user */
   const { data: user, isLoading, isError } = useQuery<UserProfile, Error>({
@@ -53,13 +57,15 @@ export default function OnboardingPage() {
     register,
     handleSubmit,
     setValue,
+    reset,
     clearErrors,
     formState: { errors },
   } = useForm<OnboardingInput>({
     resolver: zodResolver(onboardingSchema),
     defaultValues: {
+      username: "",
       bio: "",
-      profilePicture: undefined, // we’ll set when user data arrives
+      profilePicture: undefined,
     },
   });
 
@@ -78,13 +84,32 @@ export default function OnboardingPage() {
     }
   }, [user, setValue, clearErrors]);
 
+   // If already onboarded, bounce to /feed
+  useEffect(() => {
+    if (user?.onboarded) {
+      router.replace("/feed");
+    }
+  }, [user?.onboarded, router]);
+
+  // Hydrate form + preview when the user loads
+  useEffect(() => {
+    if (!user) return;
+    reset({
+      username: user.username ?? "",
+      bio: user.bio ?? "",
+      profilePicture: user.profilePicture ?? undefined,
+    });
+    setPreview(user.profilePicture ?? getDefaultAvatar());
+    clearErrors(["profilePicture"]);
+  }, [user, reset, clearErrors]);
+
   /* 5) Save mutation */
   const mutation = useMutation({
     mutationFn: (payload: OnboardingInput) =>
       onboardingService.completeOnboarding(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["user", "me"] });
-      window.location.href = "/feed";
+      router.push("/feed");
     },
     onError: (err: any) => {
       console.error(err?.response?.data || err);
@@ -138,7 +163,7 @@ export default function OnboardingPage() {
   const saving = mutation.status === "pending";
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
+     <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
       <div className="w-full max-w-lg bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-6">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 text-center">
           Complete Your Profile
@@ -148,11 +173,7 @@ export default function OnboardingPage() {
         <div className="flex flex-col items-center">
           <div className="h-24 w-24 rounded-full overflow-hidden bg-gray-200">
             {preview ? (
-              <img
-                src={preview}
-                alt="Avatar preview"
-                className="h-full w-full object-cover"
-              />
+              <img src={preview} alt="Avatar preview" className="h-full w-full object-cover" />
             ) : (
               <div className="h-full w-full flex items-center justify-center text-gray-500">
                 No Image
@@ -161,12 +182,7 @@ export default function OnboardingPage() {
           </div>
           <label className="mt-2 inline-block px-4 py-2 bg-blue-600 text-white rounded cursor-pointer hover:bg-blue-700">
             Upload new avatar
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="hidden"
-            />
+            <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
           </label>
         </div>
 
@@ -176,10 +192,13 @@ export default function OnboardingPage() {
             <Label htmlFor="username">Username</Label>
             <Input
               id="username"
-              value={user.username}
-              readOnly
-              className="bg-gray-100 dark:bg-gray-700"
+              placeholder="Your username"
+              {...register("username")}
+              className="bg-white dark:bg-gray-700"
             />
+            {errors.username && (
+              <p className="text-red-500 text-sm">{errors.username.message}</p>
+            )}
           </div>
 
           <div>
@@ -190,12 +209,10 @@ export default function OnboardingPage() {
               {...register("bio")}
               className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            {errors.bio && (
-              <p className="text-red-500 text-sm">{errors.bio.message}</p>
-            )}
+            {errors.bio && <p className="text-red-500 text-sm">{errors.bio.message}</p>}
           </div>
 
-          {/* Hidden profilePicture keeps existing URL when no new file is chosen */}
+          {/* Keep existing URL when no new file is chosen */}
           <input type="hidden" {...register("profilePicture")} />
           {errors.profilePicture && (
             <p className="text-red-500 text-sm">{errors.profilePicture.message}</p>

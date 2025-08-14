@@ -18,7 +18,8 @@ const upload = multer({ storage: multer.memoryStorage() });
 const profileSchema = Joi.object({
   username:       Joi.string().alphanum().min(3).max(30),
   bio:            Joi.string().allow('', null),
-  profilePicture: Joi.string().uri().allow('', null)
+  profilePicture: Joi.string().uri().allow('', null),
+  markOnboarded:  Joi.boolean().optional(),
 });
 
 router.get('/', authenticate, getProfile);

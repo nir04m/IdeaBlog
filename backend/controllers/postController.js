@@ -2,6 +2,8 @@
 import Post         from '../models/Post.js';
 import PostCategory from '../models/PostCategory.js';
 import PostTag      from '../models/PostTag.js';
+import Media from '../models/Media.js';
+import { deleteFromR2 } from '../services/mediaService.js';
 
 /**
  * POST /api/posts
@@ -76,6 +78,21 @@ export const getPostById = async (req, res, next) => {
   }
 };
 
+
+// helpers (same logic as avatar controller)
+const isR2Host = (host) =>
+  host.endsWith('.r2.dev') || host.endsWith('.r2.cloudflarestorage.com');
+
+const extractR2Key = (url, bucket) => {
+  const u = new URL(url);
+  let key = u.pathname.replace(/^\/+/, ''); // drop leading slash
+  // if using the S3 endpoint form: /<bucket>/media/uuid.jpg
+  if (bucket && key.startsWith(`${bucket}/`)) {
+    key = key.slice(bucket.length + 1);
+  }
+  return key; // e.g. "media/9d3b...jpg"
+};
+
 /**
  * PUT /api/posts/:id
  * Update a post (only owner)
@@ -84,6 +101,7 @@ export const updatePost = async (req, res, next) => {
   try {
     const postId = Number(req.params.id);
     const existing = await Post.findById(postId);
+    
     if (!existing) {
       return res.status(404).json({ error: 'Post not found' });
     }
@@ -91,8 +109,33 @@ export const updatePost = async (req, res, next) => {
       return res.status(403).json({ error: 'Forbidden to update this post' });
     }
 
-    const { title, content, imageUrl, categoryId, tagIds = [] } = req.body;
+    const { title, content, imageUrl, previousImageUrl, categoryId, tagIds = [] } = req.body;
+
+    const oldImageUrl = existing.imageUrl || null;
+
     const changed = await Post.update(postId, { title, content, imageUrl, categoryId, tagIds });
+    const oldUrl = previousImageUrl ?? (await Post.findById(postId))?.imageUrl ?? null;
+    console.log('Old Image URL:', oldUrl);
+    console.log('New Image URL:', imageUrl);
+
+    if (oldUrl && imageUrl && oldUrl !== imageUrl) {
+      try {
+        const BUCKET = process.env.CF_R2_BUCKET;
+        const u = new URL(oldImageUrl);
+        if (isR2Host(u.host)) {
+          const key = extractR2Key(oldImageUrl, BUCKET);
+          // only touch things in your media/ prefix
+          if (key.startsWith('media/')) {
+            await deleteFromR2({ key });
+          }
+        }
+        // 
+        await Media.deleteByPostAndUrl(postId, oldImageUrl).catch(() => {});
+      } catch {
+        // ignore deletion errors
+      }
+    }
+
     if (!changed) {
       return res.status(400).json({ error: 'No changes or update failed' });
     }

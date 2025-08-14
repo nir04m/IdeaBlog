@@ -53,7 +53,8 @@ class User {
               email,
               bio,
               profile_picture AS profilePicture,
-              is_admin      AS isAdmin
+              is_admin      AS isAdmin,
+              onboarding       AS onboarded
        FROM users
        WHERE id = ?`,
       [id]
@@ -78,6 +79,14 @@ class User {
       [username, bio, profilePicture, id]
     );
     return result.affectedRows > 0;
+  }
+
+  static async setOnboarding(id, value = true) {
+    const [r] = await pool.execute(
+      `UPDATE users SET onboarding = ? WHERE id = ?`,
+      [value ? 1 : 0, id]
+    );
+    return r.affectedRows > 0;
   }
 }
 

@@ -33,6 +33,7 @@ export type UpdatePostInput = {
   content: string;
   categoryId: number;
   imageUrl?: string | null;
+  previousImageUrl?: string | null;
 }
 
 const api = axios.create({

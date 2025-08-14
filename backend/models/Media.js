@@ -69,6 +69,14 @@ class Media {
     );
     return result.affectedRows > 0;
   }
+
+  static async deleteByPostAndUrl(postId, url) {
+    const [r] = await pool.execute(
+      `DELETE FROM media WHERE post_id = ? AND url = ?`,
+      [postId, url]
+    );
+    return r.affectedRows > 0;
+  }
 }
 
 export default Media;
