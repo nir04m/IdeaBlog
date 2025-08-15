@@ -118,10 +118,18 @@
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
+  /* Dark mode: whenever a container is white, force readable text */
+  .dark .bg-white { color: rgb(17 24 39); } /* gray-900 */
+
+  /* Headings & labels inside white cards */
+  .dark .bg-white :is(h1,h2,h3,h4,label) { color: rgb(17 24 39); }
+
+  /* Inputs on white cards in dark mode */
+  .dark .bg-white :is(input, textarea, select) {
+    background-color: #fff;
+    color: rgb(17 24 39);
   }
-  body {
-    @apply bg-background text-foreground;
-  }
+
+  /* Optional: muted copy under white cards in dark mode */
+  .dark .bg-white .text-gray-600 { color: rgb(55 65 81); } /* gray-700 */
 }
