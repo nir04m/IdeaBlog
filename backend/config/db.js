@@ -17,7 +17,28 @@ const dbUrl = new URL(process.env.DATABASE_URI);
 const dbName = dbUrl.pathname.slice(1);
 
 // Read the CA certificate
-const caCert = fs.readFileSync(resolve(__dirname, '../certs/ca.pem'));
+let caCert = null;
+
+try {
+  // try local file first
+  const certPath = resolve(__dirname, '../certs/ca.pem');
+  if (fs.existsSync(certPath)) {
+    caCert = fs.readFileSync(certPath);
+    logger.info('Loaded CA cert from file');
+  }
+} catch (e) {
+  logger.warn('Could not read cert file:', e.message);
+}
+
+// if no file, check env vars
+if (!caCert && process.env.DB_CA_PEM) {
+  caCert = process.env.DB_CA_PEM;
+  logger.info('Loaded CA cert from DB_CA_PEM env');
+}
+if (!caCert && process.env.DB_CA_B64) {
+  caCert = Buffer.from(process.env.DB_CA_B64, 'base64').toString('utf8');
+  logger.info('Loaded CA cert from DB_CA_B64 env');
+}
 
 // Read your init.sql (minus any ALTER statements)
 const initSql = fs.readFileSync(resolve(__dirname, 'init.sql'), 'utf8');
