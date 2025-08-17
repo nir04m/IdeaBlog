@@ -8,11 +8,11 @@
   "scripts": {
     "start": "npm --prefix backend start",
     "dev": "npm --prefix backend run dev",
+
     "build": "npm --prefix frontend run build",
 
-    "postinstall": "npm ci --prefix backend && npm ci --prefix frontend",
-
-    "heroku-prebuild": "npm ci --prefix backend && npm ci --prefix frontend",
+    "postinstall": "npm install --prefix backend && npm install --prefix frontend",
+    "heroku-prebuild": "npm install --prefix backend && npm install --prefix frontend",
     "heroku-postbuild": "npm run build --prefix frontend"
   },
   "workspaces": [
