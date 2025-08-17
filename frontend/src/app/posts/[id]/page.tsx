@@ -7,9 +7,9 @@ import { twMerge } from "tailwind-merge";
 
 import postService from "@/services/postService";
 import userService, { UserProfile } from "@/services/userService";
-import SidebarLayout from "@/app/components/layout/SidebarLayout";
+import SidebarLayout from "@/app/elements/layout/SidebarLayout";
 import { calsans } from "@/fonts/calsans";
-import { Navbar } from "@/app/components/layout/Navbar";
+import { Navbar } from "@/app/elements/layout/Navbar";
 
 /* Helpers */
 function formatDate(iso?: string) {

@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
-import SidebarLayout from "@/app/components/layout/SidebarLayout";
+import SidebarLayout from "@/app/elements/layout/SidebarLayout";
 
 import postService, { CreatePostInput } from "@/services/postService";
 import mediaService from "@/services/mediaService";
@@ -26,7 +26,7 @@ import {
 import { ChevronsUpDown } from "lucide-react";
 import { FileUpload } from "@/components/ui/file-upload";
 import RequireAuth from "@/components/auth/RequireAuth";
-import { Navbar } from "@/app/components/layout/Navbar";
+import { Navbar } from "@/app/elements/layout/Navbar";
 
 /* ---------- Validation ---------- */
 const schema = z.object({

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { IdeaBlogMark } from "@/app/components/branding/IdeaBlogMark";
+import { IdeaBlogMark } from "@/app/elements/branding/IdeaBlogMark";
 
 export function Navbar() {
   return (

@@ -5,14 +5,14 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
-import SidebarLayout from "@/app/components/layout/SidebarLayout";
+import SidebarLayout from "@/app/elements/layout/SidebarLayout";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ContentCard } from "@/components/cards-demo-2";
 
 import postService, { Post } from "@/services/postService";
 import userService, { UserProfile } from "@/services/userService";
 import RequireAuth from "@/components/auth/RequireAuth";
-import { Navbar } from "@/app/components/layout/Navbar";
+import { Navbar } from "@/app/elements/layout/Navbar";
 
 function PostsGrid({
   posts,

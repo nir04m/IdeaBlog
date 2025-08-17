@@ -5,12 +5,12 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
-import SidebarLayout from "../components/layout/SidebarLayout";
+import SidebarLayout from "../elements/layout/SidebarLayout";
 import postService, { Post } from "@/services/postService";
 import userService, { UserProfile } from "@/services/userService";
 import { ContentCard } from "@/components/cards-demo-2";
 import ExpandableCardDemo from "@/components/expandable-card-demo-standard";
-import { Navbar } from "@/app/components/layout/Navbar";
+import { Navbar } from "@/app/elements/layout/Navbar";
 
 
 

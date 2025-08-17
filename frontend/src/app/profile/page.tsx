@@ -9,12 +9,12 @@ import { useRouter } from "next/navigation";
 
 import userService, { UserProfile } from "@/services/userService";
 import onboardingService from "@/services/onboardingService";
-import SidebarLayout from "@/app/components/layout/SidebarLayout";
+import SidebarLayout from "@/app/elements/layout/SidebarLayout";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import RequireAuth from "@/components/auth/RequireAuth";
-import { Navbar } from "@/app/components/layout/Navbar";
+import { Navbar } from "@/app/elements/layout/Navbar";
 
 /* schema */
 const onboardingSchema = z.object({
