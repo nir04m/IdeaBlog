@@ -1,8 +1,23 @@
 {
+  "name": "ideablog-monorepo",
   "private": true,
+  "engines": {
+    "node": "20.x",
+    "npm": "10.x"
+  },
+  "scripts": {
+    "start": "npm --prefix backend start",
+    "dev": "npm --prefix backend run dev",
+    "build": "npm --prefix frontend run build",
+
+    "postinstall": "npm ci --prefix backend && npm ci --prefix frontend",
+
+    "heroku-prebuild": "npm ci --prefix backend && npm ci --prefix frontend",
+    "heroku-postbuild": "npm run build --prefix frontend"
+  },
   "workspaces": [
-    "frontend",
-    "backend"
+    "backend",
+    "frontend"
   ],
   "dependencies": {
     "next": "^15.4.6",
