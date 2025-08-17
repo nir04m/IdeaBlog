@@ -8,7 +8,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon server.js",
-    "start": "node server.js",
+    "start": "node backend/server.js",
+  "heroku-postbuild": "npm ci --prefix frontend && npm run build --prefix frontend",
     "migrate": "db-migrate up --config database.js --env dev",
     "migrate:undo": "db-migrate down --config database.js --env dev"
   },
