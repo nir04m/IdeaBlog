@@ -1,11 +1,12 @@
 import axios from "axios";
+import api from "./api";
 
 export type Category = { id: number; name: string; slug: string };
 
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
-  withCredentials: true,
-});
+// const api = axios.create({
+//   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
+//   withCredentials: true,
+// });
 
 const categoriesService = {
   list: async (): Promise<Category[]> => {

@@ -1,10 +1,11 @@
 // src/services/onboarding.ts
 import axios from 'axios';
+import api from "./api";
 
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',
-  withCredentials: true,
-});
+// const api = axios.create({
+//   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',
+//   withCredentials: true,
+// });
 
 export default {
   // Onboarding calls the same /user update but sets markOnboarded=true

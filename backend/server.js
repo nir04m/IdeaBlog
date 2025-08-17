@@ -22,7 +22,7 @@ import mediaRoutes   from './routes/mediaRoutes.js';
 import { apiLimiter }   from './middleware/rateLimiter.js';
 import errorHandler     from './middleware/errorHandler.js';
 
-
+// Handling Next.js in Node.js
 import next from 'next';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -32,6 +32,7 @@ const __dirname = path.dirname(__filename);
 // where your Next app lives
 const nextDir = path.join(__dirname, '../frontend');
 console.log('[next] using dir:', nextDir);
+process.chdir(nextDir);
 const dev = process.env.NODE_ENV !== 'production';
 const server = next({ dev, dir: nextDir });
 const handle = server.getRequestHandler();
@@ -81,7 +82,7 @@ app.use('/api/posts/:postId/media', mediaRoutes);
 // Error handler (must come last)
 app.use(errorHandler);
 
-
+// Handle Next.js requests
 app.use((req, res) => handle(req, res));
 
 
@@ -89,7 +90,7 @@ app.use((req, res) => handle(req, res));
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  logger.info('Server listening on http://localhost:%d', PORT);
+  logger.info('Server listening on ', PORT);
 });
 
 

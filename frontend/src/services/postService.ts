@@ -1,4 +1,5 @@
 import axios from "axios";
+import api from "./api";
 
 export interface Post {
   id: number;
@@ -36,10 +37,10 @@ export type UpdatePostInput = {
   previousImageUrl?: string | null;
 }
 
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
-  withCredentials: true,
-});
+// const api = axios.create({
+//   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
+//   withCredentials: true,
+// });
 
 const postService = {
   getAllPosts: async (): Promise<Post[]> => {

@@ -1,5 +1,6 @@
 // src/services/userService.ts
 import axios from "axios";
+import api from "./api";
 
 export interface UserProfile {
   id: number;
@@ -11,10 +12,10 @@ export interface UserProfile {
   createdAt: string;
 }
 
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
-  withCredentials: true,
-});
+// const api = axios.create({
+//   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
+//   withCredentials: true,
+// });
 
 export default {
   getProfile: async (): Promise<UserProfile> => {
