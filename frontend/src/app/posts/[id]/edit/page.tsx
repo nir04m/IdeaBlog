@@ -20,6 +20,17 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { ChevronsUpDown } from "lucide-react";
 import { FileUpload } from "@/components/ui/file-upload";
 import SidebarLayout from "@/app/elements/layout/SidebarLayout";
@@ -47,6 +58,8 @@ export default function EditPostPage() {
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
   // user (optional)
     const { data: user } = useQuery<UserProfile | null>({
@@ -198,6 +211,25 @@ export default function EditPostPage() {
     console.log('Image removed - will delete on save');
   };
 
+  const deleteMutation = useMutation({
+    mutationFn: () => postService.remove(postId),
+    onSuccess: async () => {
+      // clear any cached lists/details
+      await qc.invalidateQueries({ queryKey: ["posts"] });
+      await qc.invalidateQueries({ queryKey: ["posts", postId] });
+      router.push("/feed");
+    },
+    onError: (err: any) => {
+      console.error(err?.response?.data || err);
+      setErrMsg(err?.response?.data?.error || "Failed to delete post");
+    },
+  });
+
+  const handleDelete = async () => {
+    if (!window.confirm("Do you want to delete this post? This action can’t be undone.")) return;
+    deleteMutation.mutate();
+  };
+
   const catButtonLabel = useMemo(
     () => selectedCategory?.name ?? "Select category",
     [selectedCategory]
@@ -223,15 +255,20 @@ export default function EditPostPage() {
 
               {loading && <p>Loading…</p>}
               {loadError && (
-                <p className="text-red-500">
-                  Couldn’t load the post. (Are you logged in / allowed to edit?)
+                <p className="text-blue-500">
+                  Couldn’t load the post. (This post is either deleted or you don’t have permission to edit it.)
                 </p>
               )}
 
               {!loading && !loadError && (
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                  {infoMsg && (
+                    <p className="text-sm text-blue-600 bg-blue-50 dark:bg-blue-950/30 rounded p-2">
+                      {infoMsg}
+                    </p>
+                  )}
                   {errMsg && (
-                    <p className="text-sm text-red-500 bg-red-50 dark:bg-red-950/30 rounded p-2">
+                    <p className="text-sm text-blue-500 bg-red-50 dark:bg-red-950/30 rounded p-2">
                       {errMsg}
                     </p>
                   )}
@@ -359,6 +396,36 @@ export default function EditPostPage() {
                     >
                       Cancel
                     </Button>
+                    <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          disabled={deleteMutation.status === "pending"}
+                        >
+                          {deleteMutation.status === "pending" ? "Deleting…" : "Delete post"}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete this post?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. The post and its cover image will be permanently removed.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => {
+                              setConfirmOpen(false);
+                              deleteMutation.mutate();
+                            }}
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </form>
               )}

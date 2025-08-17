@@ -75,6 +75,11 @@ const postService = {
     return res.data;
   },
 
+  remove: async (id: number) => {
+    const res = await api.delete(`/posts/${id}`);
+    return res.data;
+  },
+
 };
 
 export default postService;

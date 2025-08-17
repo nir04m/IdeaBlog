@@ -27,7 +27,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete, upload
 
   const handlePickedFile = async (picked: File | null) => {
     if (!picked) return;
-    setFile(picked); // ✅ replace previous file
+    setFile(picked); //  replace previous file
 
     try {
       if (uploader) {
@@ -46,7 +46,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete, upload
   const handleClick = () => fileInputRef.current?.click();
 
   const { getRootProps, isDragActive } = useDropzone({
-    multiple: false,        // ✅ single file only
+    multiple: false,        //  single file only
     noClick: true,
     onDrop: (accepted) => handlePickedFile(accepted[0] ?? null),
     onDropRejected: (err) => console.log(err),
