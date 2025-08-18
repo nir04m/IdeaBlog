@@ -56,9 +56,12 @@ app.use(express.json({ limit: '10kb' }));
 
 
 // Request logging
-app.use(morgan('combined', {
-  stream: { write: msg => logger.info(msg.trim()) }
-}));
+if (process.env.NODE_ENV !== 'production') {
+  app.use(morgan('combined', {
+    stream: { write: msg => logger.info(msg.trim()) }
+  }));
+}
+
 
 // Rate limiting
 app.use('/api/', apiLimiter);
